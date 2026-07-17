@@ -1,0 +1,18 @@
+import "server-only";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export class NowPaymentsError extends Error{constructor(public code:string,message="NOWPayments request failed",public status=502){super(message)}}
+const baseUrl=()=>process.env.NOWPAYMENTS_API_BASE_URL?.replace(/\/$/,"")||"https://api.nowpayments.io/v1";
+const apiKey=()=>{const value=process.env.NOWPAYMENTS_API_KEY;if(!value)throw new NowPaymentsError("NOT_CONFIGURED","Deposit provider is not configured.",503);return value};
+async function request<T>(path:string,init:RequestInit={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10_000);try{const response=await fetch(`${baseUrl()}${path}`,{...init,signal:controller.signal,headers:{"x-api-key":apiKey(),"content-type":"application/json",...init.headers}});if(!response.ok)throw new NowPaymentsError("PROVIDER_ERROR",`Deposit provider request failed (${response.status}).`,502);return await response.json() as T}catch(error){if(error instanceof NowPaymentsError)throw error;if(error instanceof Error&&error.name==="AbortError")throw new NowPaymentsError("TIMEOUT","Deposit provider timed out.",504);throw new NowPaymentsError("UNAVAILABLE","Deposit provider is unavailable.",502)}finally{clearTimeout(timer)}}
+export const getApiStatus=()=>request<{message:string}>("/status");
+export const getAvailableCurrencies=()=>request<{currencies:string[]}>("/currencies");
+export const getMinimumPaymentAmount=(payCurrency:string,priceCurrency:string)=>request<{min_amount:number;fiat_equivalent?:number}>(`/min-amount?currency_from=${encodeURIComponent(payCurrency)}&currency_to=${encodeURIComponent(priceCurrency)}&fiat_equivalent=${encodeURIComponent(priceCurrency)}`);
+export const getEstimatedPrice=(amount:number,priceCurrency:string,payCurrency:string)=>request<{estimated_amount:number}>(`/estimate?amount=${encodeURIComponent(amount)}&currency_from=${encodeURIComponent(priceCurrency)}&currency_to=${encodeURIComponent(payCurrency)}`);
+export type CreatePaymentInput={price_amount:number;price_currency:string;pay_currency:string;order_id:string;order_description:string;ipn_callback_url:string};
+export type ProviderPayment={payment_id:string|number;payment_status:string;pay_address:string;price_amount:number;price_currency:string;pay_amount:number;pay_currency:string;order_id:string;order_description?:string;created_at?:string;updated_at?:string;expiration_estimate_date?:string;actually_paid?:number;outcome_amount?:number;payin_hash?:string;purchase_id?:string};
+export const createPayment=(input:CreatePaymentInput)=>request<ProviderPayment>("/payment",{method:"POST",body:JSON.stringify(input)});
+export const getPaymentStatus=(paymentId:string)=>request<ProviderPayment>(`/payment/${encodeURIComponent(paymentId)}`);
+const sortObject=(value:unknown):unknown=>Array.isArray(value)?value.map(sortObject):value&&typeof value==="object"?Object.keys(value as Record<string,unknown>).sort().reduce<Record<string,unknown>>((result,key)=>{result[key]=sortObject((value as Record<string,unknown>)[key]);return result},{}):value;
+export const canonicalizeIpnPayload=(payload:unknown)=>JSON.stringify(sortObject(payload));
+export function verifyIpnSignature(payload:unknown,signature:string){const secret=process.env.NOWPAYMENTS_IPN_SECRET;if(!secret||!signature)return false;const expected=createHmac("sha512",secret).update(canonicalizeIpnPayload(payload)).digest("hex"),provided=signature.trim().toLowerCase();if(expected.length!==provided.length)return false;return timingSafeEqual(Buffer.from(expected,"hex"),Buffer.from(provided,"hex"))}

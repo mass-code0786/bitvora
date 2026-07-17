@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum IdempotencyStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id             String              @id @default(cuid())
+  uid            String              @unique @db.VarChar(8)
+  email          String              @unique
+  passwordHash   String
+  name           String
+  role           Role                @default(USER)
+  sponsorId      String?
+  sponsorUid     String?             @db.VarChar(8)
+  emailVerified  DateTime?
+  image          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  sponsor        User?               @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  directReferrals User[]              @relation("UserSponsor")
+  accounts       Account[]
+  sessions       Session[]
+  idempotencyRecords IdempotencyRecord[]
+
+  @@index([sponsorId])
+  @@index([sponsorUid])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model IdempotencyRecord {
+  id           String            @id @default(cuid())
+  key          String
+  scope        String
+  userId       String?
+  requestHash  String?
+  responseData Json?
+  status       IdempotencyStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  expiresAt    DateTime?
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([key, scope])
+  @@index([userId])
+  @@index([expiresAt])
+}

@@ -1,0 +1,6 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Logo } from "@/components/brand";
+export default function AdminLogin(){const router=useRouter(),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[error,setError]=useState("");async function submit(event:React.FormEvent){event.preventDefault();const result=await signIn("credentials",{email,password,redirect:false});if(result?.error){setError("Invalid credentials.");return}const check=await fetch("/api/admin/session",{cache:"no-store"});if(!check.ok){setError("This account does not have administrator access.");return}router.replace("/admin");router.refresh()}return <main className="admin-login"><form className="admin-login-card" onSubmit={submit}><Logo/><small>AUTHORIZED ADMINISTRATION</small><h1>Admin access</h1><p>Sign in with a database-backed administrator account.</p><label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email"/></label><label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password"/></label>{error&&<b>{error}</b>}<button>Sign in</button></form></main>}

@@ -1,0 +1,13 @@
+node_modules
+.chrome-capture*
+.next
+out
+*.log
+coverage
+.data
+.data/kyc-uploads/
+.data/kyc-records.json
+.env*
+!.env.example
+.DS_Store
+next-env.d.ts

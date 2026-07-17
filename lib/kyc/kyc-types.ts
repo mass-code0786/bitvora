@@ -1,0 +1,10 @@
+export const KYC_STATUSES=["NOT_SUBMITTED","PENDING","APPROVED","REJECTED"] as const;
+export type KycStatus=typeof KYC_STATUSES[number];
+export const KYC_DOCUMENT_TYPES=["PASSPORT","NATIONAL_ID","DRIVING_LICENSE"] as const;
+export type KycDocumentType=typeof KYC_DOCUMENT_TYPES[number];
+export type KycDocumentKind="front"|"back"|"selfie";
+export type KycHistoryEntry={id:string;action:"SUBMITTED"|"RESUBMITTED"|"APPROVED"|"REJECTED";actor:string;beforeStatus:KycStatus;afterStatus:KycStatus;reason:string|null;timestamp:number;submissionVersion:number};
+export type KycNotification={id:string;title:string;message:string;createdAt:number};
+export type KycRecord={id:string;userId:string;userUid:string;fullName:string;dateOfBirth:string;country:string;residentialAddress:string;documentType:KycDocumentType;documentNumber:string;documentFrontPath:string;documentBackPath:string|null;selfiePath:string;documentMimeTypes:Record<KycDocumentKind,string|null>;status:Exclude<KycStatus,"NOT_SUBMITTED">;submittedAt:number;reviewedAt:number|null;reviewedBy:string|null;rejectionReason:string|null;submissionVersion:number;createdAt:number;updatedAt:number;history:KycHistoryEntry[];notifications:KycNotification[]};
+export const maskDocumentNumber=(value:string)=>value.length<=4?"••••":`${"•".repeat(Math.min(8,value.length-4))}${value.slice(-4)}`;
+export const withdrawalKycMessage=(status:KycStatus)=>({NOT_SUBMITTED:"Complete KYC verification before requesting a withdrawal.",PENDING:"Your KYC is under review. Withdrawal will be available after approval.",REJECTED:"Your KYC was rejected. Please correct and resubmit your documents.",APPROVED:"Your account is verified and eligible for withdrawal."})[status];
