@@ -627,3 +627,5 @@ button:disabled { cursor: not-allowed; opacity: .72; }
 @media(max-width:600px){.market-sticky-actions{display:block;width:auto}.market-sticky-actions-inner{display:grid;width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.market-sticky-actions-inner button{width:100%;height:4rem;min-height:4rem}}
 
 @media(max-width:600px){.market-sticky-actions-inner{padding:.5rem}.market-sticky-actions-inner button{height:2.625rem;min-height:2.625rem}}
+
+@media(max-width:600px){.tv-advanced-host{height:298px}}
