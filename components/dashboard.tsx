@@ -25,7 +25,7 @@ export function Dashboard(){const{store}=useWalletStore(),spot=store.wallets.spo
   <nav className="target-actions" aria-label="Portfolio actions">{actions.map(({label,href,icon:Icon})=><Link href={href} key={label}><span><Icon size={18}/></span><small>{label}</small></Link>)}<button onClick={()=>window.dispatchEvent(new Event("bitvora:open-menu"))}><span><MoreHorizontal size={19}/></span><small>More</small></button></nav>
   <section className="target-trade-card" aria-label="Ready to trade">
     <div className="target-trade-copy"><small>AI Copy Trading</small><strong>Today&apos;s available trades</strong><div><span>Profit <b>1%–2%</b></span><span>Future Wallet <b>{formatCurrency(future)}</b></span></div></div>
-    <Link href="/copy-trading">Trade Now</Link>
+    <Link href="/trade">Trade Now</Link>
   </section>
   <section className="target-activity"><div className="target-section-heading"><h2>Recent activity</h2><Link href="/history">See all</Link></div><div className="target-activity-list">{recent.length?recent.map(tx=><article key={tx.id}><span className="target-activity-icon"><WalletCards size={15}/></span><div><strong>{tx.title}</strong><small>{new Date(tx.timestamp).toLocaleString()}</small></div><aside><b className={tx.amount>=0?"positive":"negative"}>{formatCurrency(tx.amount,{sign:tx.amount>=0?"always":"negative-only",minimumFractionDigits:2})}</b><small>{tx.type}</small></aside></article>):<article><div><strong>No activity</strong><small>Transactions will appear here.</small></div></article>}</div></section>
 </div>}
