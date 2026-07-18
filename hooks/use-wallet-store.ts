@@ -1,10 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { cloneWalletSeed, LEGACY_WALLET_STORE_KEY, migrateWalletStore, WALLET_STORE_KEY, type WalletStore } from "@/lib/wallet-data";
+import { cloneWalletSeed, migrateWalletStore, type WalletStore } from "@/lib/wallet-data";
 
-export function useWalletStore(){const [store,setStore]=useState<WalletStore>(cloneWalletSeed);const [ready,setReady]=useState(false);
-  useEffect(()=>{const load=()=>{try{const saved=localStorage.getItem(WALLET_STORE_KEY),legacy=localStorage.getItem(LEGACY_WALLET_STORE_KEY),next=migrateWalletStore(JSON.parse(saved??legacy??"null"));localStorage.setItem(WALLET_STORE_KEY,JSON.stringify(next));setStore(next)}catch{const next=cloneWalletSeed();localStorage.setItem(WALLET_STORE_KEY,JSON.stringify(next));setStore(next)}};load();setReady(true);const sync=()=>load();window.addEventListener("bitvora-wallet-updated",sync);return()=>window.removeEventListener("bitvora-wallet-updated",sync)},[]);
-  const update=useCallback((recipe:(current:WalletStore)=>WalletStore)=>setStore(current=>{const next=recipe(current);localStorage.setItem(WALLET_STORE_KEY,JSON.stringify(next));window.dispatchEvent(new CustomEvent("bitvora-wallet-updated"));return next}),[]);
-  const reset=useCallback(()=>{const next=cloneWalletSeed();localStorage.setItem(WALLET_STORE_KEY,JSON.stringify(next));setStore(next)},[]);
-  return{store,ready,update,reset};
-}
+const save=(wallet:WalletStore)=>fetch("/api/account/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({wallet})});
+export function useWalletStore(){const[store,setStore]=useState<WalletStore>(cloneWalletSeed),[ready,setReady]=useState(false);const load=useCallback(async()=>{try{const response=await fetch("/api/account/state",{cache:"no-store"}),data=await response.json();setStore(migrateWalletStore(data.wallet))}catch{setStore(cloneWalletSeed())}finally{setReady(true)}},[]);useEffect(()=>{void load();const sync=()=>void load();window.addEventListener("bitvora-wallet-updated",sync);return()=>window.removeEventListener("bitvora-wallet-updated",sync)},[load]);const update=useCallback((recipe:(current:WalletStore)=>WalletStore)=>setStore(current=>{const next=recipe(current);void save(next).then(()=>window.dispatchEvent(new CustomEvent("bitvora-wallet-updated")));return next}),[]);const reset=useCallback(()=>{const next=cloneWalletSeed();setStore(next);void save(next)},[]);return{store,ready,update,reset}}

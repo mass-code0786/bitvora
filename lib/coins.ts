@@ -24,18 +24,14 @@ const entries: Array<[string, string]> = [
   ["ID","SPACE ID"],["RVN","Ravencoin"],["MAGIC","Magic"],["MASK","Mask Network"],["SSV","SSV Network"],["GMX","GMX"],["YFI","yearn.finance"],["SUSHI","SushiSwap"],["QTUM","Qtum"],["IOTX","IoTeX"]
 ];
 
-const anchors: Record<string, number> = {BTC:67482,ETH:3528,BNB:601,SOL:149,XRP:.52,DOGE:.14,ADA:.45,TRX:.12,AVAX:34,LINK:15};
-
-export const COIN_CATALOGUE: CoinDefinition[] = entries.map(([symbol,name],index) => {
-  const seed = symbol.split("").reduce((sum,char)=>sum+char.charCodeAt(0),0);
-  const price = anchors[symbol] ?? Number(Math.max(.00001, 1800 / Math.pow(index + 3, 1.42)).toPrecision(5));
+export const COIN_CATALOGUE: CoinDefinition[] = entries.map(([symbol,name]) => {
   return {
     symbol,name,pair:`${symbol}/USDT`,
     logo:`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`,
-    fallbackPrice:price,
-    fallbackChange:Number((((seed % 126)-55)/10).toFixed(2)),
-    fallbackVolume:Math.round(9_500_000_000 / Math.pow(index + 1, .72)),
-    fallbackMarketCap:Math.round(1_300_000_000_000 / Math.pow(index + 1, .91)),
+    fallbackPrice:0,
+    fallbackChange:0,
+    fallbackVolume:0,
+    fallbackMarketCap:0,
   };
 });
 

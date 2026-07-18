@@ -2,9 +2,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { rankHistory, salaryCycles, salaryHistory, type SalaryStatus } from "@/lib/rank-salary-data";
 
-const STORAGE_KEY="bitvora-rank-salary-state-v1";
+const STORAGE_KEY="bitvora-rank-salary-state-v2";
 type StoredState={activeTab:"rank"|"salary";currentStar:number;rankHistory:typeof rankHistory;salaryHistory:Array<{id:string;cycle:string;date:string;amount:number;rank:string;status:SalaryStatus}>;calendarStatuses:Record<string,SalaryStatus>;dismissedNotifications:string[]};
-const seed:StoredState={activeTab:"rank",currentStar:2,rankHistory,salaryHistory:salaryHistory.map(item=>({...item})),calendarStatuses:Object.fromEntries(salaryCycles.map(cycle=>[cycle.id,cycle.status])),dismissedNotifications:[]};
+const seed:StoredState={activeTab:"rank",currentStar:0,rankHistory,salaryHistory:salaryHistory.map(item=>({...item})),calendarStatuses:Object.fromEntries(salaryCycles.map(cycle=>[cycle.id,cycle.status])),dismissedNotifications:[]};
 
 export function useRankSalaryState(){
   const [state,setState]=useState<StoredState>(seed);const [hydrated,setHydrated]=useState(false);

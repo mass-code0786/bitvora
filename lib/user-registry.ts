@@ -1,11 +1,10 @@
-import { demoAccount } from "./mock-data";
-import { ROOT_USER_ID, ROOT_USER_UID, isValidUid, normalizeUid, teamMembers } from "./referral-team-data";
+import { isValidUid, normalizeUid } from "./referral-team-data";
 
 export type DemoUser={id:string;uid:string;name:string;email:string;sponsorId:string;sponsorUid:string;createdAt:number};
 export type UserRegistry={version:1;users:DemoUser[]};
 export const USER_REGISTRY_KEY="bitvora-user-registry-v1";
 
-const seedUsers=():DemoUser[]=>[{id:ROOT_USER_ID,uid:ROOT_USER_UID,name:demoAccount.name,email:demoAccount.email,sponsorId:"",sponsorUid:"",createdAt:Date.parse("2025-01-01")},...teamMembers.map(member=>({id:member.id,uid:member.uid,name:member.name,email:`${member.id.toLowerCase()}@demo.bitvora.com`,sponsorId:member.sponsorId,sponsorUid:member.sponsorUid,createdAt:Date.parse(member.joinDate)}))];
+const seedUsers=():DemoUser[]=>[];
 export const migrateUserRegistry=(value:unknown):UserRegistry=>{const seeded=seedUsers(),existing=value&&typeof value==="object"&&"users" in value?(value as {users:Partial<DemoUser>[]}).users:[],used=new Set<string>(),byId=new Map(existing.map(user=>[user.id,user]));const users=seeded.map(seed=>{const old=byId.get(seed.id),candidate=old?.uid&&isValidUid(old.uid)?normalizeUid(old.uid):seed.uid,uid=used.has(candidate)?seed.uid:candidate;used.add(uid);return{...seed,...old,uid,sponsorUid:seed.sponsorUid}});for(const old of existing){if(!old.id||users.some(user=>user.id===old.id))continue;const uid=old.uid&&isValidUid(old.uid)&&!used.has(normalizeUid(old.uid))?normalizeUid(old.uid):generateUidValue(used);used.add(uid);const sponsor=old.sponsorId?users.find(user=>user.id===old.sponsorId):undefined;users.push({id:old.id,uid,name:old.name??"Bitvora User",email:old.email??"",sponsorId:sponsor?.id??"",sponsorUid:sponsor?.uid??"",createdAt:old.createdAt??Date.now()})}return{version:1,users}};
 const generateUidValue=(used:Set<string>)=>{for(let attempt=0;attempt<100;attempt+=1){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);const uid=`BV${String(100000+bytes[0]%900000).padStart(6,"0")}`;if(!used.has(uid))return uid}throw new Error("Unable to generate a unique UID.")};
 export const loadUserRegistry=():UserRegistry=>{const saved=localStorage.getItem(USER_REGISTRY_KEY),registry=migrateUserRegistry(saved?JSON.parse(saved):null);localStorage.setItem(USER_REGISTRY_KEY,JSON.stringify(registry));return registry};

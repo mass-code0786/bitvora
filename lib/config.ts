@@ -34,19 +34,4 @@ export const salaryPlan = {
   cyclesPerYear: 24,
 };
 
-export const rankSalaryDemo = {
-  userName: "Alex Morgan",
-  userId: "BTV10001",
-  currentStar: 2,
-  totalTeam: 86,
-  qualifiedDirects: 12,
-  nextRankDirectStarsAchieved: 2,
-  achievedDates: { 1: "2026-02-14", 2: "2026-05-01" } as Record<number,string>,
-  rankAchievedDate: "2026-05-01",
-  nextSalaryDate: "2026-08-01",
-  salaryWalletPresentation: 120,
-  accountActive: true,
-  workingPlanActive: true,
-};
-
-export const appConfig = { tradingPlan, referralPlan, ranks, salaryPlan, rankSalaryDemo };
+export const appConfig = { tradingPlan, referralPlan, ranks, salaryPlan };

@@ -9,7 +9,7 @@ import { findDepositByIdempotency, findDepositByPaymentId, saveServerDeposit } f
 export const createDepositSchema=z.object({amount:z.coerce.number().finite().positive(),network:z.enum(["USDT_BEP20","USDT_TRC20"]),idempotencyKey:z.string().trim().min(8).max(128)});
 export type DepositUser={id:string;uid:string};
 const enabled=()=>process.env.NOWPAYMENTS_DEPOSIT_ENABLED==="true";
-export const mockEnabled=()=>process.env.NODE_ENV!=="production"&&process.env.NOWPAYMENTS_MOCK_MODE==="true";
+export const mockEnabled=()=>process.env.NODE_ENV==="test"&&process.env.NOWPAYMENTS_MOCK_MODE==="true";
 const callbackUrl=()=>{const base=process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/,"");if(!base)throw new NowPaymentsError("CALLBACK_URL_MISSING","Public application URL is not configured.",503);return`${base}/api/deposits/nowpayments/ipn`};
 const numeric=(value:unknown)=>{const number=Number(value);return Number.isFinite(number)&&number>=0?number:0};
 const timestamp=(value:unknown)=>typeof value==="string"&&!Number.isNaN(Date.parse(value))?Date.parse(value):null;

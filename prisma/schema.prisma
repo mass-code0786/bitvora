@@ -36,9 +36,20 @@ model User {
   accounts       Account[]
   sessions       Session[]
   idempotencyRecords IdempotencyRecord[]
+  state          UserState?
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model UserState {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  wallet    Json
+  trading   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {

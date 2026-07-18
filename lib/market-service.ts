@@ -8,15 +8,9 @@ const REST_BASE="https://data-api.binance.vision";
 const WS_BASE="wss://data-stream.binance.vision/stream?streams=";
 const TIMEOUT_MS=8000;
 
-const sparkline=(price:number,change:number,seed:number)=>Array.from({length:18},(_,i)=>{
-  const progress=i/17; const wave=Math.sin((i+seed)*1.35)*.006;
-  return price*(1-(change/100)*(1-progress)+wave);
-});
-
-export function fallbackMarkets(coins:CoinDefinition[]):MarketCoin[]{return coins.map((coin,index)=>({
-  ...coin,price:coin.fallbackPrice,change:coin.fallbackChange,volume:coin.fallbackVolume,marketCap:coin.fallbackMarketCap,
-  high:coin.fallbackPrice*(1+Math.abs(coin.fallbackChange)/100),low:coin.fallbackPrice*(1-Math.abs(coin.fallbackChange)/130),
-  sparkline:sparkline(coin.fallbackPrice,coin.fallbackChange,index),isLive:false,
+export function fallbackMarkets(coins:CoinDefinition[]):MarketCoin[]{return coins.map(coin=>({
+  ...coin,price:0,change:0,volume:0,marketCap:0,
+  high:0,low:0,sparkline:[],isLive:false,
 }))}
 
 async function fetchWithTimeout(url:string,signal?:AbortSignal){
@@ -32,10 +26,11 @@ export async function fetchMarketBatch(coins:CoinDefinition[],signal?:AbortSigna
   if(!response.ok) throw new Error(`Binance market request failed (${response.status})`);
   const tickers=await response.json() as BinanceTicker[];
   const bySymbol=new Map(tickers.map(ticker=>[ticker.symbol,ticker]));
-  return coins.map((coin,index)=>{
+  return coins.map(coin=>{
     const ticker=bySymbol.get(`${coin.symbol}USDT`); if(!ticker)return fallbackMarkets([coin])[0];
     const price=Number(ticker.lastPrice); const open=Number(ticker.openPrice); const change=open?((price-open)/open)*100:0;
-    return {...coin,price,change,volume:Number(ticker.quoteVolume),high:Number(ticker.highPrice),low:Number(ticker.lowPrice),marketCap:coin.fallbackMarketCap,sparkline:sparkline(price,change,index),isLive:true};
+    const high=Number(ticker.highPrice),low=Number(ticker.lowPrice);
+    return {...coin,price,change,volume:Number(ticker.quoteVolume),high,low,marketCap:0,sparkline:[open,low,high,price].filter(Number.isFinite),isLive:true};
   });
 }
 
