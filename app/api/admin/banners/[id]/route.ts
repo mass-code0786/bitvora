@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireDemoAdmin } from "@/lib/admin/admin-auth.server";
+import { activateBanner, BannerError, deactivateBanner, deleteBanner, updateBanner } from "@/lib/banner/banner-service.server";
+const input=z.object({action:z.enum(["ACTIVATE","DEACTIVATE","UPDATE"]),title:z.string().max(120).optional(),startsAt:z.string().optional(),expiresAt:z.string().optional()});
+export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){try{const admin=await requireDemoAdmin(),id=(await params).id,value=input.parse(await request.json()),banner=value.action==="ACTIVATE"?await activateBanner(id,admin.id):value.action==="DEACTIVATE"?await deactivateBanner(id,admin.id):await updateBanner(id,admin.id,value);return NextResponse.json({banner})}catch(error){return NextResponse.json({error:error instanceof BannerError?error.message:error instanceof z.ZodError?error.issues[0]?.message:"Banner update failed."},{status:error instanceof BannerError?error.status:400})}}
+export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){try{const admin=await requireDemoAdmin();await deleteBanner((await params).id,admin.id);return new NextResponse(null,{status:204})}catch(error){return NextResponse.json({error:error instanceof BannerError?error.message:"Banner deletion failed."},{status:error instanceof BannerError?error.status:500})}}

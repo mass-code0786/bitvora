@@ -23,6 +23,13 @@ enum AiBotSubscriptionStatus {
   EXPIRED
 }
 
+enum BannerStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
 model User {
   id                 String                 @id @default(cuid())
   uid                String                 @unique @db.VarChar(8)
@@ -45,9 +52,48 @@ model User {
   fundTransactions   AdminFundTransaction[]
   notifications      UserNotification[]
   aiBotSubscriptions AiBotSubscription[]
+  createdBanners      Banner[]               @relation("BannerCreator")
+  bannerAuditLogs     BannerAuditLog[]        @relation("BannerAuditAdmin")
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model Banner {
+  id               String           @id @default(cuid())
+  title            String
+  imageUrl         String
+  imagePath        String
+  mimeType         String
+  fileSize         Int
+  width            Int
+  height           Int
+  status           BannerStatus     @default(DRAFT)
+  isActive         Boolean          @default(false)
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  createdByAdminId String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  createdByAdmin   User             @relation("BannerCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  auditLogs        BannerAuditLog[]
+
+  @@index([isActive, startsAt, expiresAt])
+  @@index([createdAt])
+}
+
+model BannerAuditLog {
+  id        String   @id @default(cuid())
+  bannerId  String?
+  adminId   String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  banner    Banner?  @relation(fields: [bannerId], references: [id], onDelete: SetNull)
+  admin     User     @relation("BannerAuditAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([bannerId, createdAt])
+  @@index([adminId, createdAt])
 }
 
 model AiBotSubscription {
