@@ -2,6 +2,7 @@ export type CoinDefinition = {
   symbol: string;
   name: string;
   pair: string;
+  tradingViewSymbol: string;
   logo: string;
   fallbackPrice: number;
   fallbackChange: number;
@@ -26,7 +27,7 @@ const entries: Array<[string, string]> = [
 
 export const COIN_CATALOGUE: CoinDefinition[] = entries.map(([symbol,name]) => {
   return {
-    symbol,name,pair:`${symbol}/USDT`,
+    symbol,name,pair:`${symbol}/USDT`,tradingViewSymbol:`BINANCE:${symbol}USDT`,
     logo:`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`,
     fallbackPrice:0,
     fallbackChange:0,
