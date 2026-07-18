@@ -56,9 +56,25 @@ model User {
   createdBanners      Banner[]               @relation("BannerCreator")
   bannerAuditLogs     BannerAuditLog[]        @relation("BannerAuditAdmin")
   aiTradeIntents      AiTradeIntent[]
+  portfolioSnapshots  PortfolioSnapshot[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model PortfolioSnapshot {
+  id            String   @id @default(cuid())
+  userId        String
+  localDate     String   @db.VarChar(10)
+  timezone      String
+  spotBalance   Decimal  @db.Decimal(18, 2)
+  futureBalance Decimal  @db.Decimal(18, 2)
+  totalBalance  Decimal  @db.Decimal(18, 2)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, localDate])
+  @@index([userId, localDate])
 }
 
 model AiTradeIntent {
