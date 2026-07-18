@@ -1,32 +1,20 @@
 "use client";
-
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, MoreHorizontal, Send, WalletCards } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { useWalletStore } from "@/hooks/use-wallet-store";
+import { AiBotCard } from "./ai-bot-card";
 
-const actions = [
-  {label:"Deposit",href:"/deposit",icon:ArrowDownLeft},
-  {label:"Withdraw",href:"/withdraw",icon:ArrowUpRight},
-  {label:"Transfer",href:"/transfer",icon:Send},
-];
+const actions=[{label:"Deposit",href:"/deposit",icon:ArrowDownLeft},{label:"Withdraw",href:"/withdraw",icon:ArrowUpRight},{label:"Transfer",href:"/transfer",icon:Send}];
 
-export function Dashboard(){const{store,ready,available}=useWalletStore(),spot=ready&&available&&Number.isFinite(store.wallets.spot.balance)?store.wallets.spot.balance:0,future=ready&&available&&Number.isFinite(store.wallets.future.balance)?store.wallets.future.balance:0,total=spot+future,today=new Date().toDateString(),todayProfit=store.transactions.filter(tx=>tx.amount>0&&new Date(tx.timestamp).toDateString()===today&&tx.type.includes("PROFIT")).reduce((sum,tx)=>sum+tx.amount,0),opening=Math.max(0,total-todayProfit),growth=opening>0?todayProfit/opening*100:0,recent=store.transactions.slice(0,3);return <div className="target-home">
-  <section className="target-portfolio" aria-label="Portfolio summary">
-    <div className="target-card-light"/>
-    <div className="target-portfolio-heading"><span>Personal portfolio</span><i>USD</i></div>
-    <div className="target-balance"><small>Total wealth</small><h1>{formatCurrency(total)}</h1><p>{growth>=0?"+":""}{growth.toFixed(2)}% Today</p></div>
-    <div className="target-ring" aria-hidden="true">
-      <svg viewBox="0 0 220 220"><defs><linearGradient id="targetRingGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#b6a9ff"/><stop offset=".48" stopColor="#765fff"/><stop offset="1" stopColor="#4530d0"/></linearGradient></defs><circle className="target-ring-track" cx="110" cy="110" r="75"/><circle className="target-ring-value" cx="110" cy="110" r="75"/></svg>
-      <div className="target-ring-center"><small>Growth</small><strong>{growth>=0?"+":""}{growth.toFixed(2)}%</strong></div><span className="target-ring-tag tag-portfolio">Portfolio</span><span className="target-ring-tag tag-profit">Profit</span>
-    </div>
-    <div className="target-portfolio-foot"><div><small>Available</small><strong>{formatCurrency(spot)}</strong></div><div><small>Future Wallet</small><strong>{formatCurrency(future)}</strong></div></div>
-  </section>
-  <nav className="target-actions" aria-label="Portfolio actions">{actions.map(({label,href,icon:Icon})=><Link href={href} key={label}><span><Icon size={18}/></span><small>{label}</small></Link>)}<button onClick={()=>window.dispatchEvent(new Event("bitvora:open-menu"))}><span><MoreHorizontal size={19}/></span><small>More</small></button></nav>
-  <section className="target-wallet-balances" id="wallet-balances" aria-label="Wallet balances"><div><span>Spot Wallet</span><strong>{formatCurrency(spot)}</strong></div><div><span>Future Wallet</span><strong>{formatCurrency(future)}</strong></div></section>
-  <section className="target-trade-card" aria-label="Ready to trade">
-    <div className="target-trade-copy"><small>AI Copy Trading</small><strong>Today&apos;s available trades</strong><div><span>Profit <b>1%–2%</b></span><span>Future Wallet <b>{formatCurrency(future)}</b></span></div></div>
-    <Link href="/trade">Trade Now</Link>
-  </section>
-  <section className="target-activity"><div className="target-section-heading"><h2>Recent activity</h2><Link href="/history">See all</Link></div><div className="target-activity-list">{recent.length?recent.map(tx=><article key={tx.id}><span className="target-activity-icon"><WalletCards size={15}/></span><div><strong>{tx.title}</strong><small>{new Date(tx.timestamp).toLocaleString()}</small></div><aside><b className={tx.amount>=0?"positive":"negative"}>{formatCurrency(tx.amount,{sign:tx.amount>=0?"always":"negative-only",minimumFractionDigits:2})}</b><small>{tx.type}</small></aside></article>):<article><div><strong>No activity</strong><small>Transactions will appear here.</small></div></article>}</div></section>
-</div>}
+export function Dashboard(){
+  const{store,ready,available}=useWalletStore(),spot=ready&&available&&Number.isFinite(store.wallets.spot.balance)?store.wallets.spot.balance:0,future=ready&&available&&Number.isFinite(store.wallets.future.balance)?store.wallets.future.balance:0,total=spot+future,today=new Date().toDateString(),todayProfit=store.transactions.filter(tx=>tx.amount>0&&new Date(tx.timestamp).toDateString()===today&&tx.type.includes("PROFIT")).reduce((sum,tx)=>sum+tx.amount,0),opening=Math.max(0,total-todayProfit),growth=opening>0?todayProfit/opening*100:0,recent=store.transactions.slice(0,3);
+  return <div className="target-home">
+    <section className="target-portfolio" aria-label="Portfolio summary"><div className="target-card-light"/><div className="target-portfolio-heading"><span>Personal portfolio</span><i>USD</i></div><div className="target-balance"><small>Total wealth</small><h1>{formatCurrency(total)}</h1><p>{growth>=0?"+":""}{growth.toFixed(2)}% Today</p></div><div className="target-ring" aria-hidden="true"><svg viewBox="0 0 220 220"><defs><linearGradient id="targetRingGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#b6a9ff"/><stop offset=".48" stopColor="#765fff"/><stop offset="1" stopColor="#4530d0"/></linearGradient></defs><circle className="target-ring-track" cx="110" cy="110" r="75"/><circle className="target-ring-value" cx="110" cy="110" r="75"/></svg><div className="target-ring-center"><small>Growth</small><strong>{growth>=0?"+":""}{growth.toFixed(2)}%</strong></div><span className="target-ring-tag tag-portfolio">Portfolio</span><span className="target-ring-tag tag-profit">Profit</span></div><div className="target-portfolio-foot"><div><small>Available</small><strong>{formatCurrency(spot)}</strong></div><div><small>Future Wallet</small><strong>{formatCurrency(future)}</strong></div></div></section>
+    <nav className="target-actions" aria-label="Portfolio actions">{actions.map(({label,href,icon:Icon})=><Link href={href} key={label}><span><Icon size={18}/></span><small>{label}</small></Link>)}<button onClick={()=>window.dispatchEvent(new Event("bitvora:open-menu"))}><span><MoreHorizontal size={19}/></span><small>More</small></button></nav>
+    <section className="target-wallet-balances" id="wallet-balances" aria-label="Wallet balances"><div><span>Spot Wallet</span><strong>{formatCurrency(spot)}</strong></div><div><span>Future Wallet</span><strong>{formatCurrency(future)}</strong></div></section>
+    <section className="target-trade-card" aria-label="Ready to trade"><div className="target-trade-copy"><small>AI Copy Trading</small><strong>Today&apos;s available trades</strong><div><span>Profit <b>1%–2%</b></span><span>Future Wallet <b>{formatCurrency(future)}</b></span></div></div><Link href="/trade">Trade Now</Link></section>
+    <AiBotCard/>
+    <section className="target-activity"><div className="target-section-heading"><h2>Recent activity</h2><Link href="/history">See all</Link></div><div className="target-activity-list">{recent.length?recent.map(tx=><article key={tx.id}><span className="target-activity-icon"><WalletCards size={15}/></span><div><strong>{tx.title}</strong><small>{new Date(tx.timestamp).toLocaleString()}</small></div><aside><b className={tx.amount>=0?"positive":"negative"}>{formatCurrency(tx.amount,{sign:tx.amount>=0?"always":"negative-only",minimumFractionDigits:2})}</b><small>{tx.type}</small></aside></article>):<article><div><strong>No activity</strong><small>Transactions will appear here.</small></div></article>}</div></section>
+  </div>;
+}

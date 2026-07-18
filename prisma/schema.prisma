@@ -18,30 +18,52 @@ enum IdempotencyStatus {
   FAILED
 }
 
+enum AiBotSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
 model User {
-  id             String              @id @default(cuid())
-  uid            String              @unique @db.VarChar(8)
-  email          String              @unique
-  passwordHash   String
-  name           String
-  role           Role                @default(USER)
-  sponsorId      String?
-  sponsorUid     String?             @db.VarChar(8)
-  emailVerified  DateTime?
-  image          String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  sponsor        User?               @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
-  directReferrals User[]              @relation("UserSponsor")
-  accounts       Account[]
-  sessions       Session[]
+  id                 String                 @id @default(cuid())
+  uid                String                 @unique @db.VarChar(8)
+  email              String                 @unique
+  passwordHash       String
+  name               String
+  role               Role                   @default(USER)
+  sponsorId          String?
+  sponsorUid         String?                @db.VarChar(8)
+  emailVerified      DateTime?
+  image              String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  sponsor            User?                  @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  directReferrals    User[]                 @relation("UserSponsor")
+  accounts           Account[]
+  sessions           Session[]
   idempotencyRecords IdempotencyRecord[]
-  state          UserState?
-  fundTransactions AdminFundTransaction[]
-  notifications UserNotification[]
+  state              UserState?
+  fundTransactions   AdminFundTransaction[]
+  notifications      UserNotification[]
+  aiBotSubscriptions AiBotSubscription[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model AiBotSubscription {
+  id                    String                  @id @default(cuid())
+  userId                String
+  price                 Decimal                 @db.Decimal(18, 2)
+  status                AiBotSubscriptionStatus @default(ACTIVE)
+  activatedAt           DateTime
+  expiresAt             DateTime
+  purchaseTransactionId String                  @unique
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, activatedAt])
+  @@index([userId, expiresAt])
 }
 
 model AdminFundTransaction {

@@ -8,6 +8,7 @@ import { Bell, ChartNoAxesCombined, CircleUserRound, FileCheck2, Headphones, His
 import { Logo } from "./brand";
 import { SessionGuard } from "./session-guard";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { AiBotRunner } from "./ai-bot-runner";
 
 const nav=[{href:"/home",label:"Home",icon:House},{href:"/markets",label:"Markets",icon:ChartNoAxesCombined},{href:"/trade",label:"Trade",icon:Zap,primary:true},{href:"/team",label:"Team",icon:UsersRound},{href:"/profile",label:"Profile",icon:CircleUserRound}];
 const menu=[{href:"/profile",label:"Profile",icon:CircleUserRound},{href:"/profile/kyc",label:"KYC Verification",icon:FileCheck2},{href:"/history",label:"Transaction History",icon:History},{href:"/profile",label:"Settings",icon:Settings},{href:"/profile",label:"Support",icon:Headphones}];
@@ -22,7 +23,7 @@ export function AppShell({children}:{children:ReactNode}) {
   const openNotifications=async()=>{setMenuOpen(false);setNotificationsOpen(true);setNotificationsLoading(true);try{const response=await fetch("/api/notifications",{cache:"no-store"}),data=await response.json();setNotifications(response.ok?data.notifications??[]:[])}finally{setNotificationsLoading(false)}};
   const openMenu=()=>{setNotificationsOpen(false);setMenuOpen(true)};
   const actions=<div className="flex items-center gap-2"><motion.button whileTap={{scale:.9}} onClick={()=>void openNotifications()} aria-label="Notifications" className="icon-button"><Bell size={17}/></motion.button><motion.button whileTap={{scale:.9}} onClick={openMenu} aria-label="Open menu" className="icon-button"><Menu size={18}/></motion.button></div>;
-  return <div className="app-bg min-h-screen text-slate-300"><SessionGuard/><div className="noise-layer"/><div className="ambient ambient-one"/><div className="ambient ambient-two"/><div className="ambient ambient-three"/>
+  return <div className="app-bg min-h-screen text-slate-300"><SessionGuard/><AiBotRunner/><div className="noise-layer"/><div className="ambient ambient-one"/><div className="ambient ambient-two"/><div className="ambient ambient-three"/>
     <header className="premium-header sticky top-0 z-40"><div className={`mx-auto max-w-6xl px-4 sm:px-6 ${dashboard?"":"flex h-16 items-center justify-between"}`}>
       {dashboard?<><div className="target-header-top"><Logo/>{actions}</div><div className="target-header-user"><div className="target-header-avatar">{initials}</div><div><small>Hello,</small><strong>{user?.name||"User"}</strong><span>ID · {user?.uid||"—"}</span></div></div></>:<><Logo/><div className="flex items-center gap-2">{actions}</div></>}
     </div></header>
