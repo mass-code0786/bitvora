@@ -11,7 +11,7 @@ const actions = [
   {label:"Transfer",href:"/transfer",icon:Send},
 ];
 
-export function Dashboard(){const{store}=useWalletStore(),spot=store.wallets.spot.balance,future=store.wallets.future.balance,total=spot+future,today=new Date().toDateString(),todayProfit=store.transactions.filter(tx=>tx.amount>0&&new Date(tx.timestamp).toDateString()===today&&tx.type.includes("PROFIT")).reduce((sum,tx)=>sum+tx.amount,0),opening=Math.max(0,total-todayProfit),growth=opening>0?todayProfit/opening*100:0,recent=store.transactions.slice(0,3);return <div className="target-home">
+export function Dashboard(){const{store,ready,available}=useWalletStore(),spot=ready&&available&&Number.isFinite(store.wallets.spot.balance)?store.wallets.spot.balance:0,future=ready&&available&&Number.isFinite(store.wallets.future.balance)?store.wallets.future.balance:0,total=spot+future,today=new Date().toDateString(),todayProfit=store.transactions.filter(tx=>tx.amount>0&&new Date(tx.timestamp).toDateString()===today&&tx.type.includes("PROFIT")).reduce((sum,tx)=>sum+tx.amount,0),opening=Math.max(0,total-todayProfit),growth=opening>0?todayProfit/opening*100:0,recent=store.transactions.slice(0,3);return <div className="target-home">
   <section className="target-portfolio" aria-label="Portfolio summary">
     <div className="target-card-light"/>
     <div className="target-portfolio-heading"><span>Personal portfolio</span><i>USD</i></div>
@@ -23,6 +23,7 @@ export function Dashboard(){const{store}=useWalletStore(),spot=store.wallets.spo
     <div className="target-portfolio-foot"><div><small>Available</small><strong>{formatCurrency(spot)}</strong></div><div><small>Future Wallet</small><strong>{formatCurrency(future)}</strong></div></div>
   </section>
   <nav className="target-actions" aria-label="Portfolio actions">{actions.map(({label,href,icon:Icon})=><Link href={href} key={label}><span><Icon size={18}/></span><small>{label}</small></Link>)}<button onClick={()=>window.dispatchEvent(new Event("bitvora:open-menu"))}><span><MoreHorizontal size={19}/></span><small>More</small></button></nav>
+  <section className="target-wallet-balances" id="wallet-balances" aria-label="Wallet balances"><div><span>Spot Wallet</span><strong>{formatCurrency(spot)}</strong></div><div><span>Future Wallet</span><strong>{formatCurrency(future)}</strong></div></section>
   <section className="target-trade-card" aria-label="Ready to trade">
     <div className="target-trade-copy"><small>AI Copy Trading</small><strong>Today&apos;s available trades</strong><div><span>Profit <b>1%–2%</b></span><span>Future Wallet <b>{formatCurrency(future)}</b></span></div></div>
     <Link href="/trade">Trade Now</Link>

@@ -1,2 +1,3 @@
-import { WalletModule } from "@/components/wallet-module";
-export default function Page(){return <WalletModule/>}
+import { redirect } from "next/navigation";
+
+export default function Page(){redirect("/home#wallet-balances")}
