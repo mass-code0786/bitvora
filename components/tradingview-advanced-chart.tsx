@@ -2,36 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const WIDGET_SCRIPT = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+const WIDGET_SCRIPT="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+const intervals=[{label:"1m",value:"1"},{label:"5m",value:"5"},{label:"15m",value:"15"},{label:"30m",value:"30"},{label:"1H",value:"60"},{label:"4H",value:"240"},{label:"1D",value:"D"}] as const;
 
-export function TradingViewAdvancedChart({ symbol, marketName }: { symbol: string; marketName: string }) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<"waiting" | "loading" | "ready" | "unavailable">("waiting");
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    let disposed = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    let widgetObserver: MutationObserver | undefined;
-    const destroy = () => { if (timeout) clearTimeout(timeout); widgetObserver?.disconnect(); host.replaceChildren(); };
-    const createWidget = () => {
-      if (disposed) return;
-      destroy(); setState("loading");
-      const container = document.createElement("div"); container.className = "tradingview-widget-container";
-      const widget = document.createElement("div"); widget.className = "tradingview-widget-container__widget"; container.appendChild(widget);
-      widgetObserver = new MutationObserver(() => { if (container.querySelector("iframe")) { if (timeout) clearTimeout(timeout); setState("ready"); widgetObserver?.disconnect(); } });
-      widgetObserver.observe(container, { childList: true, subtree: true });
-      const script = document.createElement("script"); script.src = WIDGET_SCRIPT; script.async = true; script.type = "text/javascript";
-      script.onerror = () => !disposed && setState("unavailable");
-      script.text = JSON.stringify({ autosize:true, symbol, interval:"60", timezone:"exchange", theme:"dark", backgroundColor:"rgba(7, 7, 18, 1)", gridColor:"rgba(130, 116, 240, 0.08)", style:"1", locale:"en", withdateranges:true, hide_side_toolbar:false, hide_top_toolbar:false, hide_legend:false, hide_volume:false, allow_symbol_change:false, save_image:true, show_popup_button:true, popup_width:"1200", popup_height:"720", calendar:false, support_host:"https://www.tradingview.com" });
-      container.appendChild(script); host.appendChild(container);
-      timeout = setTimeout(() => { if (!container.querySelector("iframe") && !disposed) setState("unavailable"); }, 15000);
-    };
-    const visibility = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) { visibility.disconnect(); createWidget(); } }, { rootMargin:"240px 0px" });
-    visibility.observe(host);
-    return () => { disposed = true; visibility.disconnect(); destroy(); };
-  }, [symbol]);
-
-  return <section className="tv-advanced-card" aria-label={`${marketName} live chart`}><div className="tv-advanced-heading"><div><span>Live market chart</span><strong>{marketName}</strong></div><small>{symbol}</small></div><div className="tv-advanced-host" ref={hostRef}/>{(state === "waiting" || state === "loading") && <div className="tv-chart-status">Loading live chart…</div>}{state === "unavailable" && <div className="tv-chart-status tv-chart-unavailable" role="status">Chart unavailable for this market.</div>}</section>;
-}
+export function TradingViewAdvancedChart({symbol,marketName}:{symbol:string;marketName:string}){const hostRef=useRef<HTMLDivElement>(null),[state,setState]=useState<"waiting"|"loading"|"ready"|"unavailable">("waiting"),[interval,setIntervalValue]=useState("60"),[more,setMore]=useState(false);
+  useEffect(()=>{const host=hostRef.current;if(!host)return;let disposed=false,timeout:ReturnType<typeof setTimeout>|undefined,widgetObserver:MutationObserver|undefined;const destroy=()=>{if(timeout)clearTimeout(timeout);widgetObserver?.disconnect();host.replaceChildren()};const createWidget=()=>{if(disposed)return;destroy();setState("loading");const container=document.createElement("div");container.className="tradingview-widget-container";const widget=document.createElement("div");widget.className="tradingview-widget-container__widget";container.appendChild(widget);widgetObserver=new MutationObserver(()=>{if(container.querySelector("iframe")){if(timeout)clearTimeout(timeout);setState("ready");widgetObserver?.disconnect()}});widgetObserver.observe(container,{childList:true,subtree:true});const script=document.createElement("script");script.src=WIDGET_SCRIPT;script.async=true;script.type="text/javascript";script.onerror=()=>!disposed&&setState("unavailable");script.text=JSON.stringify({autosize:true,symbol,interval,timezone:"exchange",theme:"dark",backgroundColor:"rgba(7, 7, 18, 1)",gridColor:"rgba(130, 116, 240, 0.08)",style:"1",locale:"en",withdateranges:true,hide_side_toolbar:false,hide_top_toolbar:false,hide_legend:false,hide_volume:false,allow_symbol_change:false,save_image:true,show_popup_button:true,popup_width:"1200",popup_height:"720",calendar:false,support_host:"https://www.tradingview.com"});container.appendChild(script);host.appendChild(container);timeout=setTimeout(()=>{if(!container.querySelector("iframe")&&!disposed)setState("unavailable")},15000)};const visibility=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){visibility.disconnect();createWidget()}},{rootMargin:"240px 0px"});visibility.observe(host);return()=>{disposed=true;visibility.disconnect();destroy()}},[symbol,interval]);
+  return <section className="tv-advanced-card" aria-label={`${marketName} live chart`}><div className="tv-advanced-heading"><div><span>Live market chart</span><strong>{marketName}</strong></div><small>{symbol}</small></div><div className="tv-intervals" aria-label="Chart interval">{intervals.map(item=><button className={interval===item.value?"active":""} onClick={()=>{setIntervalValue(item.value);setMore(false)}} key={item.value}>{item.label}</button>)}<button className={more||interval==="W"?"active":""} onClick={()=>setMore(value=>!value)}>More</button>{more&&<div><button onClick={()=>{setIntervalValue("W");setMore(false)}}>1W</button><button onClick={()=>{setIntervalValue("M");setMore(false)}}>1M</button></div>}</div><div className="tv-advanced-host" ref={hostRef}/>{(state==="waiting"||state==="loading")&&<div className="tv-chart-status">Loading live chart…</div>}{state==="unavailable"&&<div className="tv-chart-status tv-chart-unavailable" role="status">Chart unavailable for this market.</div>}</section>}
