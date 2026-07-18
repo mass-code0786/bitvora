@@ -51,3 +51,4 @@ CREATE UNIQUE INDEX "AiTradeIntent_tokenHash_key" ON "AiTradeIntent"("tokenHash"
 CREATE INDEX "AiTradeIntent_userId_sessionId_idx" ON "AiTradeIntent"("userId", "sessionId");
 CREATE INDEX "AiTradeIntent_expiresAt_idx" ON "AiTradeIntent"("expiresAt");
 ALTER TABLE "AiTradeIntent" ADD CONSTRAINT "AiTradeIntent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "User" ADD COLUMN "timezone" TEXT NOT NULL DEFAULT 'UTC';
