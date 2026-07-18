@@ -36,3 +36,18 @@ CREATE INDEX "BannerAuditLog_adminId_createdAt_idx" ON "BannerAuditLog"("adminId
 ALTER TABLE "Banner" ADD CONSTRAINT "Banner_createdByAdminId_fkey" FOREIGN KEY ("createdByAdminId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "BannerAuditLog" ADD CONSTRAINT "BannerAuditLog_bannerId_fkey" FOREIGN KEY ("bannerId") REFERENCES "Banner"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "BannerAuditLog" ADD CONSTRAINT "BannerAuditLog_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+CREATE TABLE "AiTradeIntent" (
+    "id" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AiTradeIntent_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "AiTradeIntent_tokenHash_key" ON "AiTradeIntent"("tokenHash");
+CREATE INDEX "AiTradeIntent_userId_sessionId_idx" ON "AiTradeIntent"("userId", "sessionId");
+CREATE INDEX "AiTradeIntent_expiresAt_idx" ON "AiTradeIntent"("expiresAt");
+ALTER TABLE "AiTradeIntent" ADD CONSTRAINT "AiTradeIntent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

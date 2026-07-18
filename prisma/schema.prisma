@@ -54,9 +54,24 @@ model User {
   aiBotSubscriptions AiBotSubscription[]
   createdBanners      Banner[]               @relation("BannerCreator")
   bannerAuditLogs     BannerAuditLog[]        @relation("BannerAuditAdmin")
+  aiTradeIntents      AiTradeIntent[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model AiTradeIntent {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  sessionId String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sessionId])
+  @@index([expiresAt])
 }
 
 model Banner {
