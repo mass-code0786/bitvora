@@ -536,6 +536,7 @@ button:disabled { cursor: not-allowed; opacity: .72; }
 @media(max-width:365px){.app-bg:has(.target-home) main{padding-inline:.75rem}.target-header-user{gap:.48rem}.target-portfolio{height:16.55rem;border-radius:1.8rem}.target-balance h1{font-size:2.2rem}.target-ring{width:10.6rem;height:10.6rem}.target-actions{gap:.3rem}.target-actions span{width:2.8rem;height:2.8rem}.target-trade-card{gap:.45rem;padding-inline:.8rem}.target-trade-copy>div{gap:.45rem}.target-trade-card>a{min-width:4.9rem}}
 
 /* Inner pages use the full mobile viewport, with desktop-only content caps. */
+.floating-nav{z-index:90;pointer-events:auto;isolation:isolate}.floating-nav>*,.floating-nav a{pointer-events:auto}.nav-item>i,.copy-hero:after{pointer-events:none}.copy-module{position:relative;z-index:0;padding-bottom:max(7rem,calc(7rem + env(safe-area-inset-bottom)))}
 .inner-page-main,
 .inner-page-main > *,
 .wallet-module,
