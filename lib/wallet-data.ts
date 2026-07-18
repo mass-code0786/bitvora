@@ -10,8 +10,9 @@ export type WalletTransactionType=
   |"AI_BOT_PURCHASE"|"AI_TRADE_CAPITAL_LOCK"|"AI_TRADE_CAPITAL_RETURN"|"AI_REGULAR_TRADE_PROFIT"|"AI_ADDITIONAL_TRADE_PROFIT";
 export type TransactionStatus="COMPLETED"|"PENDING"|"DEMO"|"REJECTED";
 export type TransferLedgerDetails={grossAmount:number;deductionAmount:number;netAmount:number;progressPercentage:number};
+export type WithdrawalLedgerDetails={requestedAmount:number;fee:number;netAmount:number;network:"BEP20"|"TRC20"|"ERC20";address:string};
 export type AiTradeLedgerDetails={userUid:string;sessionId:string;pair:string;direction:"CALL"|"PUT";grossFutureBalance:number;tradeCapital:number;profitPercentage:number;profitAmount:number};
-export type WalletTransaction={id:string;userId:string;wallet:WalletId;type:WalletTransactionType;title:string;amount:number;balanceBefore:number;balanceAfter:number;status:TransactionStatus;reference:string;timestamp:number;transferDetails?:TransferLedgerDetails;aiTradeDetails?:AiTradeLedgerDetails};
+export type WalletTransaction={id:string;userId:string;wallet:WalletId;type:WalletTransactionType;title:string;amount:number;balanceBefore:number;balanceAfter:number;status:TransactionStatus;reference:string;timestamp:number;transferDetails?:TransferLedgerDetails;withdrawalDetails?:WithdrawalLedgerDetails;aiTradeDetails?:AiTradeLedgerDetails};
 export type SpotIncomeBreakdown={deposit:number;referralIncome:number;levelIncome:number;salaryIncome:number;rewardIncome:number;futureWalletTransfer:number;otherIncome:number};
 export type WalletAccount={id:WalletId;name:"Spot Wallet"|"Future Wallet";balance:number;color:string};
 export type ReferralQualification={consumed:boolean;firstTransferAmount:number|null;qualified:boolean};
@@ -27,6 +28,9 @@ const DEMO_USER_ID="BTV10001";
 export const money=(value:number)=>cents(value)/100;
 export const addMoney=(a:number,b:number)=>money((cents(a)+cents(b))/100);
 export const subtractMoney=(a:number,b:number)=>money((cents(a)-cents(b))/100);
+export const MINIMUM_WITHDRAWAL_AMOUNT=10;
+export const FIXED_WITHDRAWAL_FEE=5;
+export function requestSpotWithdrawal(store:WalletStore,input:{key:string;userId:string;amount:number;network:WithdrawalLedgerDetails["network"];address:string;timestamp:number}){const requestedAmount=money(input.amount);if(requestedAmount<MINIMUM_WITHDRAWAL_AMOUNT)throw new Error("Minimum withdrawal amount is $10.");if(hasProcessed(store,input.key))return store;const before=store.wallets.spot.balance;if(requestedAmount>before)throw new Error("Insufficient Spot Wallet balance.");const fee=FIXED_WITHDRAWAL_FEE,netAmount=subtractMoney(requestedAmount,fee),after=subtractMoney(before,requestedAmount),details:WithdrawalLedgerDetails={requestedAmount,fee,netAmount,network:input.network,address:input.address},record:WalletTransaction={id:`${input.key}:withdrawal`,userId:input.userId,wallet:"spot",type:"SPOT_WITHDRAWAL",title:"Withdrawal requested",amount:-requestedAmount,balanceBefore:before,balanceAfter:after,status:"PENDING",reference:`withdrawal:${input.key}`,timestamp:input.timestamp,withdrawalDetails:details};return{...store,wallets:{...store.wallets,spot:{...store.wallets.spot,balance:after}},transactions:[record,...store.transactions],processedKeys:[input.key,...store.processedKeys]}}
 const now=Date.now();
 const tx=(id:string,wallet:WalletId,type:WalletTransactionType,title:string,amount:number,before:number,after:number,reference:string,timestamp:number=now):WalletTransaction=>({id,userId:DEMO_USER_ID,wallet,type,title,amount:money(amount),balanceBefore:money(before),balanceAfter:money(after),status:"COMPLETED",reference,timestamp});
 
