@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireDemoAdmin } from "@/lib/admin/admin-auth.server";
+import { AdminFundError, applyAdminFund, getAdminFundUser, listAdminFundTransactions } from "@/lib/admin/admin-fund-service.server";
+const uid=z.string().trim().toUpperCase().regex(/^BV\d{6}$/);
+const input=z.object({userUid:uid,action:z.enum(["CREDIT","DEDUCT"]),amount:z.coerce.number().finite().positive(),reason:z.string().trim().min(1).max(1000),idempotencyKey:z.string().trim().min(8).max(128)});
+export async function GET(request:Request){try{await requireDemoAdmin();const value=new URL(request.url).searchParams.get("uid");if(value){const user=await getAdminFundUser(uid.parse(value));return user?NextResponse.json({user}):NextResponse.json({error:"User not found."},{status:404})}return NextResponse.json({transactions:await listAdminFundTransactions()},{headers:{"Cache-Control":"no-store"}})}catch(error){return NextResponse.json({error:error instanceof z.ZodError?"Enter a valid UID.":"Admin access required."},{status:error instanceof z.ZodError?400:401})}}
+export async function POST(request:Request){try{const admin=await requireDemoAdmin(),value=input.parse(await request.json()),result=await applyAdminFund({...value,admin:{id:admin.id,uid:admin.uid}});return NextResponse.json(result,{status:result.duplicate?200:201})}catch(error){if(error instanceof AdminFundError)return NextResponse.json({error:error.message,code:error.code},{status:error.status});if(error instanceof z.ZodError)return NextResponse.json({error:error.issues[0]?.message??"Invalid request."},{status:400});return NextResponse.json({error:"Fund action failed."},{status:500})}}

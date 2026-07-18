@@ -37,9 +37,47 @@ model User {
   sessions       Session[]
   idempotencyRecords IdempotencyRecord[]
   state          UserState?
+  fundTransactions AdminFundTransaction[]
+  notifications UserNotification[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model AdminFundTransaction {
+  id                  String   @id @default(cuid())
+  idempotencyKey      String   @unique
+  userId              String
+  userUid             String   @db.VarChar(8)
+  userName            String
+  action              String
+  amount              Decimal  @db.Decimal(18, 2)
+  reason              String
+  adminId             String
+  adminUid            String   @db.VarChar(8)
+  previousBalance     Decimal  @db.Decimal(18, 2)
+  newBalance          Decimal  @db.Decimal(18, 2)
+  ledgerTransactionId String   @unique
+  status              String
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userUid, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model UserNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  reference String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model UserState {
