@@ -7,7 +7,7 @@ import { useWalletStore } from "@/hooks/use-wallet-store";
 import { PageHeader } from "./ui";
 import { WalletNotices, WalletPortal, WalletSuccess, type WalletNotice } from "./wallet-ui";
 
-type TransferResponse={wallet?:WalletStore;quote?:WalletTransferQuote;error?:string};
+type TransferResponse={wallet?:WalletStore;quote?:WalletTransferQuote;error?:string;requiresConfirmation?:boolean};
 type PendingTransfer={amount:number;quote:WalletTransferQuote;remainingTargetPercentage:number};
 
 export function WalletTransferModule(){
@@ -24,7 +24,8 @@ export function WalletTransferModule(){
     setProcessing(true);
     try{
       if(from==="future"){
-        const response=await fetch("/api/account/transfer",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({from:"future",amount:transferAmount,idempotencyKey:requestKey.current})}),payload=await response.json() as TransferResponse;
+        const response=await fetch("/api/account/transfer",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({from:"future",amount:transferAmount,idempotencyKey:requestKey.current,confirmedEarlyTransfer:Boolean(pending)})}),payload=await response.json() as TransferResponse;
+        if(response.status===409&&payload.requiresConfirmation&&payload.quote){setPending({amount:transferAmount,quote:payload.quote,remainingTargetPercentage:Math.max(0,100-payload.quote.progressPercentage)});return}
         if(!response.ok||!payload.wallet||!payload.quote)throw new Error(payload.error??"Transfer could not be completed.");
         replace(payload.wallet);
         const text=payload.quote.earlyTransfer?`Future Wallet transfer completed with 20% deduction. ${formatCurrency(payload.quote.netCredit)} was credited to Spot Wallet.`:"Future Wallet transfer completed with no deduction.";
