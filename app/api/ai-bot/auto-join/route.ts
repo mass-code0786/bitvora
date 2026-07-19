@@ -18,7 +18,7 @@ export async function POST(request:Request){
       try{
         const placed=placeUserTrade({store:trading,session,userId:user.id,userUid:user.uid,futureBalance:wallet.wallets.future.balance,now,placementSource:"AI_BOT"});
         if(!placed.created)return{joined:false,reason:"ALREADY_JOINED" as const,wallet,trading};
-        const details={userUid:user.uid,sessionId:session.id,pair:session.pair,direction:placed.trade.direction,grossFutureBalance:placed.trade.balanceSnapshot,tradeCapital:placed.trade.tradeCapital,profitPercentage:placed.trade.profitRate,profitAmount:placed.trade.profitAmount},nextWallet=lockFutureTradeCapital(wallet,placed.trade.tradeCapital,placed.trade.idempotencyKey,details,now);
+        const details={userUid:user.uid,tradeId:placed.trade.id,sessionId:session.id,pair:session.pair,direction:placed.trade.direction,source:"AI_BOT" as const,grossFutureBalance:placed.trade.balanceSnapshot,tradeCapital:placed.trade.tradeCapital,profitPercentage:placed.trade.profitRate,profitAmount:placed.trade.profitAmount},nextWallet=lockFutureTradeCapital(wallet,placed.trade.tradeCapital,placed.trade.idempotencyKey,details,now);
         const stored=await transaction.userState.upsert({where:{userId:user.id},create:{userId:user.id,wallet:nextWallet as object,trading:placed.store as object},update:{wallet:nextWallet as object,trading:placed.store as object}});
         return{joined:true,trade:placed.trade,wallet:stored.wallet as unknown as WalletStore,trading:stored.trading as unknown as AiTradingStore};
       }catch(error){return{joined:false,reason:error instanceof Error?error.message:"NOT_ELIGIBLE" as const}}
