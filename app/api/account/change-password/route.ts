@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
+import { hashPassword, PASSWORD_MIN_LENGTH, verifyPassword } from "@/lib/auth/password";
+import { prisma } from "@/lib/prisma";
+
+const schema=z.object({currentPassword:z.string().min(1),newPassword:z.string().min(PASSWORD_MIN_LENGTH).refine(value=>value.trim().length>=PASSWORD_MIN_LENGTH,"Password must be at least 8 characters.")});
+export async function POST(request:Request){try{const authUser=await requireAuthenticatedUser(),input=schema.parse(await request.json()),user=await prisma.user.findUnique({where:{id:authUser.id},select:{passwordHash:true}});if(!user||!await verifyPassword(user.passwordHash,input.currentPassword))return NextResponse.json({error:"Current password is incorrect.",code:"CURRENT_PASSWORD_INCORRECT"},{status:400});if(await verifyPassword(user.passwordHash,input.newPassword))return NextResponse.json({error:"New password must be different from the current password.",code:"PASSWORD_UNCHANGED"},{status:400});await prisma.user.update({where:{id:authUser.id},data:{passwordHash:await hashPassword(input.newPassword)}});return NextResponse.json({success:true,message:"Password updated successfully."})}catch(error){if(error instanceof z.ZodError)return NextResponse.json({error:error.issues[0]?.message??"Invalid password.",code:"INVALID_PASSWORD"},{status:400});if(error instanceof Error&&error.message==="UNAUTHENTICATED")return NextResponse.json({error:"Authentication required."},{status:401});return NextResponse.json({error:"Unable to update password."},{status:500})}}
