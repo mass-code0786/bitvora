@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { evaluateAuthoritativeNetwork, recalculateAuthoritativeNetwork, retainedFuturePrincipal } from "@/lib/rank-recalculation.server";
+import { calculateDescendantBusiness, evaluateAuthoritativeNetwork, recalculateAuthoritativeNetwork, retainedFuturePrincipal } from "@/lib/rank-recalculation.server";
 import { cloneWalletSeed, transferBetweenWallets, type WalletStore, type WalletTransaction } from "@/lib/wallet-data";
 
 const principalWallet=(amount:number,uid:string)=>{const wallet=cloneWalletSeed(),transaction:WalletTransaction={id:`principal:${uid}`,userId:uid,wallet:"future",type:"SPOT_TO_FUTURE_TRANSFER",title:"Spot Wallet to Future Wallet",amount,balanceBefore:0,balanceAfter:amount,status:"COMPLETED",reference:`wallet-transfer:${uid}`,timestamp:1};wallet.transactions=[transaction];wallet.wallets.future.balance=amount;wallet.totalFuturePrincipal=amount;return wallet};
@@ -10,6 +10,12 @@ describe("authoritative qualified-team recalculation",()=>{
   it.each([[49.99,false],[50,true],[100,true]] as const)("qualifies retained principal %s as %s",(amount,qualified)=>expect(retainedFuturePrincipal(principalWallet(amount,"member")).qualified).toBe(qualified));
 
   it("immediately removes qualification when retained principal falls below $50",()=>{const wallet=principalWallet(100,"member");wallet.wallets.spot.balance=0;const reduced=transferBetweenWallets(wallet,"future",50.01,"reduce",2,{sourceUserId:"member",genealogy:[],distributeReferrals:false});expect(reduced.totalFuturePrincipal).toBe(49.99);expect(retainedFuturePrincipal(reduced)).toMatchObject({retainedFuturePrincipal:49.99,qualified:false,reason:"RETAINED_FUTURE_PRINCIPAL_BELOW_50"})});
+
+  it("excludes self principal when there are no descendants",()=>expect(calculateDescendantBusiness("BV100000",[user("root","BV100000",null,principalWallet(50,"root"))])).toMatchObject({selfPrincipalExcluded:50,descendantCount:0,descendantBusiness:0,includedDescendants:[]}));
+
+  it("sums direct and unlimited-depth descendant principal without self",()=>{const users=[user("root","BV100000",null,principalWallet(100,"root")),user("a","BV100001","BV100000",principalWallet(50,"a")),user("b","BV100002","BV100001",principalWallet(100,"b")),user("c","BV100003","BV100002",principalWallet(200,"c"))];expect(calculateDescendantBusiness("BV100000",users)).toMatchObject({selfPrincipalExcluded:100,descendantCount:3,descendantBusiness:350,includedDescendants:[{uid:"BV100001",retainedFuturePrincipal:50},{uid:"BV100002",retainedFuturePrincipal:100},{uid:"BV100003",retainedFuturePrincipal:200}]})});
+
+  it("does not double count a genealogy cycle",()=>{const users=[user("root","BV100000","BV100002",principalWallet(50,"root")),user("a","BV100001","BV100000",principalWallet(50,"a")),user("b","BV100002","BV100001",principalWallet(100,"b"))],result=calculateDescendantBusiness("BV100000",users);expect(result).toMatchObject({descendantCount:2,descendantBusiness:150});expect(result.cycleOrDuplicateSkips).toEqual([{uid:"BV100000",reason:"GENEALOGY_CYCLE_OR_DUPLICATE"}])});
 
   it("recalculates a parent rank from five authoritative qualified directs",()=>{const users=[user("parent","BV100000",null),...Array.from({length:5},(_,index)=>user(`d${index}`,`BV10000${index+1}`,"BV100000",principalWallet(50,`d${index}`)))],evaluation=evaluateAuthoritativeNetwork(users).evaluations.get("BV100000")!;expect(evaluation.qualifiedTeamCount).toBe(5);expect(evaluation.currentStar).toBe(1);expect(evaluation.directRankCount).toBe(0);expect(evaluation.newRewardRanks).toEqual([1])});
 
