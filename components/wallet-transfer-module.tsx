@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { ArrowRight, ChevronDown, Repeat2, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
-import { getFutureMetrics, getTransferQuote, money, transferBetweenWallets, type WalletId, type WalletStore, type WalletTransferQuote } from "@/lib/wallet-data";
+import { getFutureMetrics, getTransferQuote, money, type WalletId, type WalletStore, type WalletTransferQuote } from "@/lib/wallet-data";
 import { useWalletStore } from "@/hooks/use-wallet-store";
 import { PageHeader } from "./ui";
 import { WalletNotices, WalletPortal, WalletSuccess, type WalletNotice } from "./wallet-ui";
@@ -11,7 +11,7 @@ type TransferResponse={wallet?:WalletStore;quote?:WalletTransferQuote;error?:str
 type PendingTransfer={amount:number;quote:WalletTransferQuote;remainingTargetPercentage:number};
 
 export function WalletTransferModule(){
-  const{store,update,replace}=useWalletStore(),[from,setFrom]=useState<WalletId>("spot"),[amount,setAmount]=useState(""),[pending,setPending]=useState<PendingTransfer|null>(null),[successText,setSuccessText]=useState(""),[notices,setNotices]=useState<WalletNotice[]>([]),[processing,setProcessing]=useState(false);
+  const{store,replace}=useWalletStore(),[from,setFrom]=useState<WalletId>("spot"),[amount,setAmount]=useState(""),[pending,setPending]=useState<PendingTransfer|null>(null),[successText,setSuccessText]=useState(""),[notices,setNotices]=useState<WalletNotice[]>([]),[processing,setProcessing]=useState(false);
   const noticeId=useRef(0),requestKey=useRef(""),processingRef=useRef(false),to:WalletId=from==="spot"?"future":"spot",source=store.wallets[from],target=store.wallets[to],metrics=getFutureMetrics(store),numeric=money(Number(amount)),quote=getTransferQuote(store,from,numeric),valid=numeric>0&&numeric<=source.balance;
   const notify=(title:string,text:string)=>{const id=++noticeId.current;setNotices(current=>[...current,{id,title,text}]);setTimeout(()=>setNotices(current=>current.filter(item=>item.id!==id)),3500)};
   const closeConfirmation=()=>{if(!processingRef.current)setPending(null)};
@@ -23,17 +23,14 @@ export function WalletTransferModule(){
     processingRef.current=true;
     setProcessing(true);
     try{
-      if(from==="future"){
-        const response=await fetch("/api/account/transfer",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({from:"future",amount:transferAmount,idempotencyKey:requestKey.current,confirmedEarlyTransfer:Boolean(pending)})}),payload=await response.json() as TransferResponse;
+      {
+        const response=await fetch("/api/account/transfer",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({from,amount:transferAmount,idempotencyKey:requestKey.current,confirmedEarlyTransfer:Boolean(pending)})}),payload=await response.json() as TransferResponse;
         if(response.status===409&&payload.requiresConfirmation&&payload.quote){setPending({amount:transferAmount,quote:payload.quote,remainingTargetPercentage:Math.max(0,100-payload.quote.progressPercentage)});return}
         if(!response.ok||!payload.wallet||!payload.quote)throw new Error(payload.error??"Transfer could not be completed.");
         replace(payload.wallet);
-        const text=payload.quote.earlyTransfer?`Future Wallet transfer completed with 20% deduction. ${formatCurrency(payload.quote.netCredit)} was credited to Spot Wallet.`:"Future Wallet transfer completed with no deduction.";
+        const text=from==="spot"?`${formatCurrency(transferAmount)} was moved to Future Wallet.`:payload.quote.earlyTransfer?`Future Wallet transfer completed with 20% deduction. ${formatCurrency(payload.quote.netCredit)} was credited to Spot Wallet.`:"Future Wallet transfer completed with no deduction.";
         setPending(null);setSuccessText(text);notify("Transfer Complete",text);setAmount("");return;
       }
-      const response=await fetch("/api/account/genealogy",{cache:"no-store"}),genealogy=await response.json() as {sourceUserId?:string;records?:Array<{id:string;sponsorId:string;uid:string;sponsorUid:string}>};
-      update(current=>transferBetweenWallets(current,from,transferAmount,requestKey.current,Date.now(),{sourceUserId:genealogy.sourceUserId,genealogy:genealogy.records??[]}));
-      const text=`${formatCurrency(transferAmount)} was moved to Future Wallet.`;setPending(null);setSuccessText(text);notify("Transfer Complete",text);setAmount("");
     }catch(error){notify("Transfer unavailable",error instanceof Error?error.message:"Transfer could not be completed.")}finally{processingRef.current=false;setProcessing(false)}
   };
   const submit=()=>{if(!valid){notify("Transfer unavailable",numeric>source.balance?"Insufficient wallet balance.":"Enter a valid transfer amount.");return}requestKey.current=`transfer-${crypto.randomUUID()}`;void complete()};

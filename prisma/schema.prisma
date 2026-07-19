@@ -30,6 +30,11 @@ enum BannerStatus {
   EXPIRED
 }
 
+enum ReferralDistributionStatus {
+  CREATED
+  NO_PAYOUT
+}
+
 model User {
   id                 String                 @id @default(cuid())
   uid                String                 @unique @db.VarChar(8)
@@ -57,9 +62,48 @@ model User {
   bannerAuditLogs     BannerAuditLog[]        @relation("BannerAuditAdmin")
   aiTradeIntents      AiTradeIntent[]
   portfolioSnapshots  PortfolioSnapshot[]
+  referralDistributions ReferralDistribution[] @relation("ReferralSource")
+  referralIncomeEntries ReferralIncomeEntry[] @relation("ReferralRecipient")
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model ReferralDistribution {
+  id                 String                     @id @default(cuid())
+  referredUserId     String
+  eventType          String                     @default("FIRST_SPOT_TO_FUTURE")
+  sourceTransferId   String                     @unique
+  idempotencyKey     String                     @unique
+  transferAmount     Decimal                    @db.Decimal(18, 2)
+  status             ReferralDistributionStatus
+  resultCode         String
+  createdAt          DateTime                   @default(now())
+  referredUser       User                       @relation("ReferralSource", fields: [referredUserId], references: [id], onDelete: Restrict)
+  entries            ReferralIncomeEntry[]
+
+  @@unique([referredUserId, eventType])
+  @@index([referredUserId, createdAt])
+}
+
+model ReferralIncomeEntry {
+  id                 String               @id @default(cuid())
+  distributionId     String
+  recipientUserId    String
+  sourceReferredUserId String
+  sourceTransferId   String
+  level              Int
+  percentage         Decimal              @db.Decimal(5, 2)
+  amount             Decimal              @db.Decimal(18, 2)
+  transactionType    String
+  ledgerTransactionId String               @unique
+  createdAt          DateTime              @default(now())
+  distribution       ReferralDistribution @relation(fields: [distributionId], references: [id], onDelete: Restrict)
+  recipient          User                 @relation("ReferralRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@unique([distributionId, recipientUserId, level])
+  @@index([recipientUserId, createdAt])
+  @@index([sourceReferredUserId, sourceTransferId])
 }
 
 model PortfolioSnapshot {
