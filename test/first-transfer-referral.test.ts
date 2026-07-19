@@ -42,12 +42,14 @@ describe("first Spot to Future referral",()=>{
     const distribution={id:"distribution",referredUserId:"source",eventType:"FIRST_SPOT_TO_FUTURE",sourceTransferId:"transfer:debit",idempotencyKey:"key",transferAmount:100,status:"CREATED",resultCode:"DISTRIBUTION_CREATED",createdAt:new Date(),entries};
     const tx={referralDistribution:{findUnique:async()=>distribution,create:async()=>distribution,findUniqueOrThrow:async()=>distribution},userState:{findUnique:async({where}:{where:{userId:string}})=>states.get(where.userId)??null,upsert:async({where,create,update}:{where:{userId:string};create:{wallet:unknown};update:{wallet:unknown}})=>{const value={wallet:(states.has(where.userId)?update:create).wallet as ReturnType<typeof cloneWalletSeed>};states.set(where.userId,value);return value}},referralIncomeEntry:{create:async({data}:{data:Record<string,unknown>})=>{const entry={...data,id:`entry-${entries.length}`,createdAt:new Date()};entries.push(entry as typeof directEntry);return entry}},userNotification:{create:async({data}:{data:unknown})=>{notifications.push(data);return data}},referralIncomeAuditLog:{create:async({data}:{data:unknown})=>{audits.push(data);return data}}} as unknown as Prisma.TransactionClient;
     const input={source:users[0],users,amount:100,transferId:"transfer:debit",transferReference:"wallet-transfer:transfer",idempotencyKey:"transfer",timestamp:1};
-    await distributeFirstSpotToFuture(tx,input);
+    const result=await distributeFirstSpotToFuture(tx,input);
     expect(entries.map(entry=>[entry.transactionType,entry.level,entry.amount])).toEqual([["SPOT_REFERRAL_INCOME",0,5],["SPOT_LEVEL_INCOME",1,1],["SPOT_LEVEL_INCOME",2,1],["SPOT_LEVEL_INCOME",3,1],["SPOT_LEVEL_INCOME",4,1],["SPOT_LEVEL_INCOME",5,1]]);
     expect((states.get("direct")!.wallet as ReturnType<typeof cloneWalletSeed>).wallets.spot.balance).toBe(1);
     expect(notifications).toHaveLength(5);expect(audits).toHaveLength(5);
-    await distributeFirstSpotToFuture(tx,input);
+    expect(result.outcomes.filter(item=>item.code==="LEVEL_INCOME_CREATED").map(item=>item.level)).toEqual([1,2,3,4,5]);
+    const retry=await distributeFirstSpotToFuture(tx,input);
     expect(entries).toHaveLength(6);expect(notifications).toHaveLength(5);expect(audits).toHaveLength(5);
+    expect(retry.outcomes.filter(item=>item.code==="LEVEL_ALREADY_PAID").map(item=>item.level)).toEqual([1,2,3,4,5]);
   });
   it("does not commission a second qualifying Spot to Future transfer",()=>{const seed=cloneWalletSeed();seed.wallets.spot.balance=200;const first=transferBetweenWallets(seed,"spot",100,"first-qualified",1,{sourceUserId:"source",genealogy:users.map(user=>({...user,sponsorId:user.sponsorId??"",sponsorUid:user.sponsorUid??""}))}),second=transferBetweenWallets(first,"spot",100,"second-qualified",2,{sourceUserId:"source",genealogy:users.map(user=>({...user,sponsorId:user.sponsorId??"",sponsorUid:user.sponsorUid??""}))});expect(second.referralCommissions).toHaveLength(first.referralCommissions.length)});
 });
