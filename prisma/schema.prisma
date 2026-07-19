@@ -94,6 +94,7 @@ model ReferralIncomeEntry {
   sourceReferredUserId String
   sourceTransferId   String
   level              Int
+  incomeType         String
   percentage         Decimal              @db.Decimal(5, 2)
   amount             Decimal              @db.Decimal(18, 2)
   transactionType    String
@@ -102,7 +103,7 @@ model ReferralIncomeEntry {
   distribution       ReferralDistribution @relation(fields: [distributionId], references: [id], onDelete: Restrict)
   recipient          User                 @relation("ReferralRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
 
-  @@unique([distributionId, recipientUserId, level])
+  @@unique([distributionId, recipientUserId, incomeType, level])
   @@index([recipientUserId, createdAt])
   @@index([sourceReferredUserId, sourceTransferId])
 }
