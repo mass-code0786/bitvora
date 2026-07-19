@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8");
+const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8"),api=fs.readFileSync(path.join(process.cwd(),"app/api/ai-trading/route.ts"),"utf8");
 
 describe("AI Copy Trading frontend layout",()=>{
   it("keeps the requested heading and wallet data while removing obsolete headings",()=>{
@@ -15,13 +15,30 @@ describe("AI Copy Trading frontend layout",()=>{
   });
 
   it("places one compact BTC chart between the wallet and session card",()=>{
-    expect(copy).toMatch(/future-wallet-hero[\s\S]*<TradingViewCompactChart\/><CurrentSessionCard[\s\S]*<TradeHistory/);
+    expect(copy).toMatch(/future-wallet-hero[\s\S]*<TradingViewCompactChart\/><CurrentSessionCard[\s\S]*<CurrentTrades[\s\S]*<TradeHistory/);
     expect(copy.match(/<TradingViewCompactChart\/>/g)).toHaveLength(1);
+  });
+
+  it("keeps the compact card empty except for its label and backend-authorized Trade button",()=>{
+    expect(copy).not.toContain("No eligible session");
+    expect(copy).not.toContain("The next eligible session will appear automatically.");
+    expect(copy).toContain('session.status==="LIVE"&&session.eligible');
+    expect(copy).toMatch(/<span>Copy Trading<\/span>[\s\S]*<button disabled={!canTrade} onClick={onTrade}>Trade<\/button>/);
+  });
+
+  it("renders server-grouped current and historical trades without overlap",()=>{
+    expect(copy).toContain("Current Trades");
+    expect(copy).toContain("Trade History");
+    expect(copy).toContain("No active trades.");
+    expect(copy).toContain("No trade history.");
+    expect(api).toContain("currentTrades=groupedTrades.filter(item=>item.isCurrent)");
+    expect(api).toContain("tradeHistory=groupedTrades.filter(item=>!item.isCurrent)");
+    expect(api).toContain("displaySettledTime");
   });
 
   it("uses a live dark one-minute candlestick widget without trading clutter",()=>{
     expect(chart).toContain('symbol:"BINANCE:BTCUSDT"');
-    expect(chart).toContain('interval:"1"');
+    expect(chart).toContain('interval,studies');
     expect(chart).toContain('style:"1"');
     expect(chart).toContain('theme:"dark"');
     expect(chart).toContain('hide_side_toolbar:true');
@@ -30,6 +47,21 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(chart).not.toContain("Buy");
     expect(chart).not.toContain("Sell");
     expect(chart).toContain("host.replaceChildren()");
-    expect(chart).toContain("},[])");
+    expect(chart).toContain("},[interval,studies])");
+  });
+
+  it("shows compact timeframe and TradingView study controls with 1m selected by default",()=>{
+    expect(chart).not.toContain("Live market");
+    expect(chart).toContain("BTC/USDT");
+    expect(chart).toContain('[interval,setIntervalValue]=useState("1")');
+    expect(chart).toContain('{label:"1m",value:"1"}');
+    expect(chart).toContain('{label:"5m",value:"5"}');
+    expect(chart).toContain('{label:"15m",value:"15"}');
+    expect(chart).toContain('{label:"1D",value:"D"}');
+    expect(chart).toContain("Moving Average");
+    expect(chart).toContain("Bollinger Bands");
+    expect(chart).toContain("RSI@tv-basicstudies");
+    expect(chart).toContain("MACD@tv-basicstudies");
+    expect(chart).toContain("Volume@tv-basicstudies");
   });
 });
