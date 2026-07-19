@@ -1,0 +1,17 @@
+import type { Prisma } from "@prisma/client";
+import { describe, expect, it } from "vitest";
+import { evaluateAuthoritativeNetwork, recalculateAuthoritativeNetwork, retainedFuturePrincipal } from "@/lib/rank-recalculation.server";
+import { cloneWalletSeed, transferBetweenWallets, type WalletStore, type WalletTransaction } from "@/lib/wallet-data";
+
+const principalWallet=(amount:number,uid:string)=>{const wallet=cloneWalletSeed(),transaction:WalletTransaction={id:`principal:${uid}`,userId:uid,wallet:"future",type:"SPOT_TO_FUTURE_TRANSFER",title:"Spot Wallet to Future Wallet",amount,balanceBefore:0,balanceAfter:amount,status:"COMPLETED",reference:`wallet-transfer:${uid}`,timestamp:1};wallet.transactions=[transaction];wallet.wallets.future.balance=amount;wallet.totalFuturePrincipal=amount;return wallet};
+const user=(id:string,uid:string,sponsorUid:string|null,wallet:WalletStore=cloneWalletSeed())=>({id,uid,sponsorUid,state:{wallet,trading:{}}});
+
+describe("authoritative qualified-team recalculation",()=>{
+  it.each([[49.99,false],[50,true],[100,true]] as const)("qualifies retained principal %s as %s",(amount,qualified)=>expect(retainedFuturePrincipal(principalWallet(amount,"member")).qualified).toBe(qualified));
+
+  it("immediately removes qualification when retained principal falls below $50",()=>{const wallet=principalWallet(100,"member");wallet.wallets.spot.balance=0;const reduced=transferBetweenWallets(wallet,"future",50.01,"reduce",2,{sourceUserId:"member",genealogy:[],distributeReferrals:false});expect(reduced.totalFuturePrincipal).toBe(49.99);expect(retainedFuturePrincipal(reduced)).toMatchObject({retainedFuturePrincipal:49.99,qualified:false,reason:"RETAINED_FUTURE_PRINCIPAL_BELOW_50"})});
+
+  it("recalculates a parent rank from five authoritative qualified directs",()=>{const users=[user("parent","BV100000",null),...Array.from({length:5},(_,index)=>user(`d${index}`,`BV10000${index+1}`,"BV100000",principalWallet(50,`d${index}`)))],evaluation=evaluateAuthoritativeNetwork(users).evaluations.get("BV100000")!;expect(evaluation.qualifiedTeamCount).toBe(5);expect(evaluation.currentStar).toBe(1);expect(evaluation.directRankCount).toBe(0);expect(evaluation.newRewardRanks).toEqual([1])});
+
+  it("credits a missing rank reward once, updates salary eligibility, and is retry-safe",async()=>{const users=[user("parent","BV100000",null),...Array.from({length:5},(_,index)=>user(`d${index}`,`BV10000${index+1}`,"BV100000",principalWallet(50,`d${index}`)))];const tx={user:{findMany:async()=>users,findUnique:async()=>null},userState:{update:async({where,data}:{where:{userId:string};data:{wallet:unknown}})=>{users.find(item=>item.id===where.userId)!.state.wallet=data.wallet as WalletStore;return{}},create:async()=>({})}} as unknown as Prisma.TransactionClient;const first=await recalculateAuthoritativeNetwork(tx,{timestamp:10}),second=await recalculateAuthoritativeNetwork(tx,{timestamp:11}),wallet=users[0].state.wallet;expect(first.find(item=>item.uid==="BV100000")).toMatchObject({rankAfter:1,salaryEligible:true,missingRewardRanks:[1],rewardAmount:30});expect(second.find(item=>item.uid==="BV100000")).toMatchObject({rankAfter:1,salaryEligible:true,missingRewardRanks:[],rewardAmount:0});expect(wallet.transactions.filter(transaction=>transaction.type==="SPOT_REWARD_INCOME")).toHaveLength(1);expect(wallet.transactions.filter(transaction=>transaction.type==="SPOT_SALARY_INCOME")).toHaveLength(0);expect(wallet.wallets.spot.balance).toBe(30)});
+});

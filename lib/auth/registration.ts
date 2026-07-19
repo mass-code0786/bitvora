@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "./password";
 import { isValidUserUid, normalizeEmail, normalizeUserUid } from "./normalization";
 import { generateUniqueUserUid } from "./uid";
+import { recalculateAuthoritativeNetwork } from "@/lib/rank-recalculation.server";
 
 export const registrationSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(100),
@@ -32,10 +33,11 @@ export async function registerUser(input: RegistrationInput): Promise<SafeRegist
         : null;
       if (data.referralUid && !sponsor) throw new RegistrationError("INVALID_REFERRAL", "Invalid referral UID.");
       const uid = await generateUniqueUserUid(tx);
-      return tx.user.create({
+      const created=await tx.user.create({
         data: { uid, email: data.email, passwordHash, name: data.name, sponsorId: sponsor?.id, sponsorUid: sponsor?.uid },
         select: { uid: true, email: true, name: true, role: true, createdAt: true },
       });
+      await recalculateAuthoritativeNetwork(tx);return created;
     });
   } catch (error) {
     if (error instanceof RegistrationError) throw error;

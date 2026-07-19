@@ -5,6 +5,7 @@ import { createEmptyTradingStore } from "@/lib/ai-trading-engine";
 import { cloneWalletSeed, getTransferQuote, migrateWalletStore, money, transferBetweenWallets, type WalletStore } from "@/lib/wallet-data";
 import { prisma } from "@/lib/prisma";
 import { distributeFirstSpotToFuture, referralLogCodes } from "@/lib/referral/first-transfer.server";
+import { recalculateAuthoritativeNetwork } from "@/lib/rank-recalculation.server";
 
 const input=z.object({from:z.enum(["spot","future"]),amount:z.number().positive(),idempotencyKey:z.string().min(8).max(120),confirmedEarlyTransfer:z.boolean().optional().default(false)});
 
@@ -20,8 +21,9 @@ export async function POST(request:Request){
       const calculated=transferBetweenWallets(wallet,value.from,amount,value.idempotencyKey,timestamp,{sourceUserId:user.id,genealogy,distributeReferrals:false}),next={...calculated,transactions:calculated.transactions.map(item=>item.id.startsWith(`${value.idempotencyKey}:`)?{...item,userId:user.id}:item)};
       if(value.from==="spot"&&!wallet.referralQualification.consumed)await distributeFirstSpotToFuture(transaction,{source:user,users,amount,transferId:`${value.idempotencyKey}:debit`,transferReference:`wallet-transfer:${value.idempotencyKey}`,idempotencyKey:value.idempotencyKey,timestamp});
       else if(value.from==="spot")console.info(JSON.stringify({component:"first-transfer-referral",code:referralLogCodes.notFirstTransfer,referredUserId:user.id,sourceTransferId:`${value.idempotencyKey}:debit`}));
-      const stored=await transaction.userState.upsert({where:{userId:user.id},create:{userId:user.id,wallet:next as object,trading:createEmptyTradingStore() as object},update:{wallet:next as object}});
-      return{wallet:stored.wallet as unknown as WalletStore,quote,alreadyProcessed:false};
+      await transaction.userState.upsert({where:{userId:user.id},create:{userId:user.id,wallet:next as object,trading:createEmptyTradingStore() as object},update:{wallet:next as object}});
+      await recalculateAuthoritativeNetwork(transaction,{timestamp});const refreshed=await transaction.userState.findUniqueOrThrow({where:{userId:user.id}});
+      return{wallet:refreshed.wallet as unknown as WalletStore,quote,alreadyProcessed:false};
     },{isolationLevel:"Serializable"});
     if("requiresConfirmation" in result)return NextResponse.json({error:"Early-transfer confirmation is required.",quote:result.quote,requiresConfirmation:true},{status:409,headers:{"Cache-Control":"no-store"}});
     return NextResponse.json(result,{headers:{"Cache-Control":"no-store"}});
