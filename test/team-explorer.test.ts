@@ -1,0 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
+import { cloneWalletSeed } from "@/lib/wallet-data";
+
+const mocks=vi.hoisted(()=>({auth:vi.fn(),raw:vi.fn()}));
+vi.mock("@/lib/auth/server",()=>({requireAuthenticatedUser:mocks.auth}));
+vi.mock("@/lib/prisma",()=>({prisma:{$queryRaw:mocks.raw}}));
+import { GET } from "@/app/api/team/route";
+
+describe("recursive team explorer",()=>{
+  beforeEach(()=>{vi.clearAllMocks();mocks.auth.mockResolvedValue({id:"root-id",uid:"BV100000"})});
+  it("returns only the selected parent's paginated direct referrals with real card fields",async()=>{const wallet=cloneWalletSeed();wallet.wallets.future.balance=100;wallet.rankAccount.currentStar=1;wallet.transactions=[{id:"p",userId:"child-id",wallet:"future",type:"SPOT_TO_FUTURE_TRANSFER",title:"Transfer",amount:100,balanceBefore:0,balanceAfter:100,status:"COMPLETED",reference:"wallet-transfer:p",timestamp:1}];mocks.raw.mockResolvedValueOnce([{id:"root-id",uid:"BV100000",name:"Root"}]).mockResolvedValueOnce([{count:1}]).mockResolvedValueOnce([{id:"child-id",uid:"BV100001",name:"Child",email:"child@example.com",createdAt:new Date(),wallet}]).mockResolvedValueOnce([{rootId:"root-id",totalTeam:1,qualifiedTeam:1,directCount:1,newThisMonth:1,totalBusiness:100,personalBusiness:0},{rootId:"child-id",totalTeam:0,qualifiedTeam:0,directCount:0,newThisMonth:0,totalBusiness:100,personalBusiness:100}]);const response=await GET(new Request("http://localhost/api/team?page=1&pageSize=20&search=child")),body=await response.json();expect(response.status).toBe(200);expect(body.members).toHaveLength(1);expect(body.members[0]).toMatchObject({uid:"BV100001",email:"child@example.com",rank:1,futureWalletBalance:100,totalTeam:0,totalBusiness:100,qualified:true,directCount:0});expect(body.pagination).toMatchObject({page:1,pageSize:20,total:1})});
+  it("rejects a parent outside the authenticated user's descendant branch",async()=>{mocks.raw.mockResolvedValueOnce([]);const response=await GET(new Request("http://localhost/api/team?parentUid=BV999999"));expect(response.status).toBe(403);expect(await response.json()).toMatchObject({error:"Genealogy branch is not available."});expect(mocks.raw).toHaveBeenCalledOnce()});
+  it("removes aggregate level cards and keeps recursive, search, pagination, back, and empty-state UI",async()=>{const source=await readFile("components/team-module.tsx","utf8");expect(source).not.toContain("Level breakdown");expect(source).not.toContain("level-breakdown");expect(source).toContain("View More");expect(source).toContain("No direct referrals found.");expect(source).toContain("Search name, email, or UID");expect(source).toContain("Back one genealogy level");expect(source).toContain("Page {pagination.page}")});
+});
