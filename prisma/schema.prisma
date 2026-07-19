@@ -64,6 +64,7 @@ model User {
   portfolioSnapshots  PortfolioSnapshot[]
   referralDistributions ReferralDistribution[] @relation("ReferralSource")
   referralIncomeEntries ReferralIncomeEntry[] @relation("ReferralRecipient")
+  referralIncomeAuditLogs ReferralIncomeAuditLog[] @relation("ReferralAuditRecipient")
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -104,6 +105,22 @@ model ReferralIncomeEntry {
   @@unique([distributionId, recipientUserId, level])
   @@index([recipientUserId, createdAt])
   @@index([sourceReferredUserId, sourceTransferId])
+}
+
+model ReferralIncomeAuditLog {
+  id                 String   @id @default(cuid())
+  distributionId     String
+  recipientUserId    String
+  sourceReferredUserId String
+  level              Int
+  action             String
+  ledgerTransactionId String  @unique
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  recipient          User     @relation("ReferralAuditRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@index([distributionId, createdAt])
+  @@index([recipientUserId, createdAt])
 }
 
 model PortfolioSnapshot {

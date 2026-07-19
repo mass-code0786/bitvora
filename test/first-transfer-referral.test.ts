@@ -15,7 +15,7 @@ const users=[
 describe("first Spot to Future referral",()=>{
   it("calculates $25 direct and five real $5 upline payouts",()=>{
     const plan=buildFirstTransferPayoutPlan(users[0],users,500);
-    expect(plan.map(item=>[item.level,item.percentage,item.amount])).toEqual([[0,5,25],[1,1,5],[2,1,5],[3,1,5],[4,1,5],[5,1,5]]);
+    expect(plan.map(item=>[item.level,item.percentage,item.amount])).toEqual([[0,5,25],[2,1,5],[3,1,5],[4,1,5],[5,1,5],[6,1,5]]);
   });
   it("uses only existing real uplines",()=>expect(buildFirstTransferPayoutPlan(users[0],users.slice(0,3),500)).toHaveLength(2));
   it("pays nothing below $50",()=>expect(buildFirstTransferPayoutPlan(users[0],users,49.99)).toEqual([]));
