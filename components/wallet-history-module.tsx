@@ -6,7 +6,7 @@ import type { WalletTransactionType } from "@/lib/wallet-data";
 import { useWalletStore } from "@/hooks/use-wallet-store";
 import { PageHeader } from "./ui";
 
-const filters:[string,WalletTransactionType|null][]=[["All",null],["Deposits","SPOT_DEPOSIT"],["Referral","SPOT_REFERRAL_INCOME"],["Level","SPOT_LEVEL_INCOME"],["Salary","SPOT_SALARY_INCOME"],["Rewards","SPOT_REWARD_INCOME"],["Spot → Future","SPOT_TO_FUTURE_TRANSFER"],["Future → Spot","FUTURE_TO_SPOT_TRANSFER"],["Early fees","FUTURE_EARLY_TRANSFER_FEE"],["AI Profit","AI_TRADE_PROFIT_CREDITED"]],PAGE_SIZE=6;
+const filters:[string,WalletTransactionType|null][]=[["All",null],["Deposits","SPOT_DEPOSIT"],["Referral","SPOT_REFERRAL_INCOME"],["Level","SPOT_LEVEL_INCOME"],["AI Bot Sponsor","AI_BOT_SPONSOR_INCOME"],["Salary","SPOT_SALARY_INCOME"],["Rewards","SPOT_REWARD_INCOME"],["Spot → Future","SPOT_TO_FUTURE_TRANSFER"],["Future → Spot","FUTURE_TO_SPOT_TRANSFER"],["Early fees","FUTURE_EARLY_TRANSFER_FEE"],["AI Profit","AI_TRADE_PROFIT_CREDITED"]],PAGE_SIZE=6;
 const localDate=(timestamp:number,timeZone:string)=>new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(timestamp));
 
 export function WalletHistoryModule(){

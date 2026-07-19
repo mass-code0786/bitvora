@@ -36,72 +36,75 @@ enum ReferralDistributionStatus {
 }
 
 model User {
-  id                 String                 @id @default(cuid())
-  uid                String                 @unique @db.VarChar(8)
-  email              String                 @unique
-  passwordHash       String
-  name               String
-  role               Role                   @default(USER)
-  sponsorId          String?
-  sponsorUid         String?                @db.VarChar(8)
-  emailVerified      DateTime?
-  image              String?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  timezone           String                 @default("UTC")
-  sponsor            User?                  @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
-  directReferrals    User[]                 @relation("UserSponsor")
-  accounts           Account[]
-  sessions           Session[]
-  idempotencyRecords IdempotencyRecord[]
-  state              UserState?
-  fundTransactions   AdminFundTransaction[]
-  notifications      UserNotification[]
-  aiBotSubscriptions AiBotSubscription[]
-  createdBanners      Banner[]               @relation("BannerCreator")
-  bannerAuditLogs     BannerAuditLog[]        @relation("BannerAuditAdmin")
-  aiTradeIntents      AiTradeIntent[]
-  portfolioSnapshots  PortfolioSnapshot[]
-  referralDistributions ReferralDistribution[] @relation("ReferralSource")
-  referralIncomeEntries ReferralIncomeEntry[] @relation("ReferralRecipient")
-  referralIncomeAuditLogs ReferralIncomeAuditLog[] @relation("ReferralAuditRecipient")
+  id                          String                       @id @default(cuid())
+  uid                         String                       @unique @db.VarChar(8)
+  email                       String                       @unique
+  passwordHash                String
+  name                        String
+  role                        Role                         @default(USER)
+  sponsorId                   String?
+  sponsorUid                  String?                      @db.VarChar(8)
+  emailVerified               DateTime?
+  image                       String?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  timezone                    String                       @default("UTC")
+  sponsor                     User?                        @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  directReferrals             User[]                       @relation("UserSponsor")
+  accounts                    Account[]
+  sessions                    Session[]
+  idempotencyRecords          IdempotencyRecord[]
+  state                       UserState?
+  fundTransactions            AdminFundTransaction[]
+  notifications               UserNotification[]
+  aiBotSubscriptions          AiBotSubscription[]
+  aiBotSponsorIncomeReceived  AiBotSponsorIncome[]         @relation("AiBotIncomeSponsor")
+  aiBotSponsorIncomeGenerated AiBotSponsorIncome[]         @relation("AiBotIncomeBuyer")
+  aiBotSponsorIncomeAuditLogs AiBotSponsorIncomeAuditLog[] @relation("AiBotIncomeAuditSponsor")
+  createdBanners              Banner[]                     @relation("BannerCreator")
+  bannerAuditLogs             BannerAuditLog[]             @relation("BannerAuditAdmin")
+  aiTradeIntents              AiTradeIntent[]
+  portfolioSnapshots          PortfolioSnapshot[]
+  referralDistributions       ReferralDistribution[]       @relation("ReferralSource")
+  referralIncomeEntries       ReferralIncomeEntry[]        @relation("ReferralRecipient")
+  referralIncomeAuditLogs     ReferralIncomeAuditLog[]     @relation("ReferralAuditRecipient")
 
   @@index([sponsorId])
   @@index([sponsorUid])
 }
 
 model ReferralDistribution {
-  id                 String                     @id @default(cuid())
-  referredUserId     String
-  eventType          String                     @default("FIRST_SPOT_TO_FUTURE")
-  sourceTransferId   String                     @unique
-  idempotencyKey     String                     @unique
-  transferAmount     Decimal                    @db.Decimal(18, 2)
-  status             ReferralDistributionStatus
-  resultCode         String
-  createdAt          DateTime                   @default(now())
-  referredUser       User                       @relation("ReferralSource", fields: [referredUserId], references: [id], onDelete: Restrict)
-  entries            ReferralIncomeEntry[]
+  id               String                     @id @default(cuid())
+  referredUserId   String
+  eventType        String                     @default("FIRST_SPOT_TO_FUTURE")
+  sourceTransferId String                     @unique
+  idempotencyKey   String                     @unique
+  transferAmount   Decimal                    @db.Decimal(18, 2)
+  status           ReferralDistributionStatus
+  resultCode       String
+  createdAt        DateTime                   @default(now())
+  referredUser     User                       @relation("ReferralSource", fields: [referredUserId], references: [id], onDelete: Restrict)
+  entries          ReferralIncomeEntry[]
 
   @@unique([referredUserId, eventType])
   @@index([referredUserId, createdAt])
 }
 
 model ReferralIncomeEntry {
-  id                 String               @id @default(cuid())
-  distributionId     String
-  recipientUserId    String
+  id                   String               @id @default(cuid())
+  distributionId       String
+  recipientUserId      String
   sourceReferredUserId String
-  sourceTransferId   String
-  level              Int
-  incomeType         String
-  percentage         Decimal              @db.Decimal(5, 2)
-  amount             Decimal              @db.Decimal(18, 2)
-  transactionType    String
-  ledgerTransactionId String               @unique
-  createdAt          DateTime              @default(now())
-  distribution       ReferralDistribution @relation(fields: [distributionId], references: [id], onDelete: Restrict)
-  recipient          User                 @relation("ReferralRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  sourceTransferId     String
+  level                Int
+  incomeType           String
+  percentage           Decimal              @db.Decimal(5, 2)
+  amount               Decimal              @db.Decimal(18, 2)
+  transactionType      String
+  ledgerTransactionId  String               @unique
+  createdAt            DateTime             @default(now())
+  distribution         ReferralDistribution @relation(fields: [distributionId], references: [id], onDelete: Restrict)
+  recipient            User                 @relation("ReferralRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
 
   @@unique([distributionId, recipientUserId, incomeType, level])
   @@index([recipientUserId, createdAt])
@@ -109,16 +112,16 @@ model ReferralIncomeEntry {
 }
 
 model ReferralIncomeAuditLog {
-  id                 String   @id @default(cuid())
-  distributionId     String
-  recipientUserId    String
+  id                   String   @id @default(cuid())
+  distributionId       String
+  recipientUserId      String
   sourceReferredUserId String
-  level              Int
-  action             String
-  ledgerTransactionId String  @unique
-  metadata           Json?
-  createdAt          DateTime @default(now())
-  recipient          User     @relation("ReferralAuditRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  level                Int
+  action               String
+  ledgerTransactionId  String   @unique
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  recipient            User     @relation("ReferralAuditRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
 
   @@index([distributionId, createdAt])
   @@index([recipientUserId, createdAt])
@@ -140,14 +143,14 @@ model PortfolioSnapshot {
 }
 
 model AiTradeIntent {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
   userId    String
   sessionId String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, sessionId])
   @@index([expiresAt])
@@ -201,9 +204,45 @@ model AiBotSubscription {
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
   user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sponsorIncome         AiBotSponsorIncome?
 
   @@index([userId, activatedAt])
   @@index([userId, expiresAt])
+}
+
+model AiBotSponsorIncome {
+  id                       String                      @id @default(cuid())
+  sponsorUserId            String
+  buyerUserId              String
+  botSubscriptionId        String                      @unique
+  botPurchaseTransactionId String                      @unique
+  purchaseAmount           Decimal                     @db.Decimal(18, 2)
+  percentage               Decimal                     @db.Decimal(5, 2)
+  commissionAmount         Decimal                     @db.Decimal(18, 2)
+  ledgerTransactionId      String                      @unique
+  status                   String                      @default("COMPLETED")
+  createdAt                DateTime                    @default(now())
+  sponsor                  User                        @relation("AiBotIncomeSponsor", fields: [sponsorUserId], references: [id], onDelete: Restrict)
+  buyer                    User                        @relation("AiBotIncomeBuyer", fields: [buyerUserId], references: [id], onDelete: Restrict)
+  subscription             AiBotSubscription           @relation(fields: [botSubscriptionId], references: [id], onDelete: Restrict)
+  auditLog                 AiBotSponsorIncomeAuditLog?
+
+  @@index([sponsorUserId, createdAt])
+  @@index([buyerUserId, createdAt])
+}
+
+model AiBotSponsorIncomeAuditLog {
+  id                  String             @id @default(cuid())
+  sponsorIncomeId     String             @unique
+  sponsorUserId       String
+  action              String
+  ledgerTransactionId String             @unique
+  metadata            Json
+  createdAt           DateTime           @default(now())
+  sponsorIncome       AiBotSponsorIncome @relation(fields: [sponsorIncomeId], references: [id], onDelete: Restrict)
+  sponsor             User               @relation("AiBotIncomeAuditSponsor", fields: [sponsorUserId], references: [id], onDelete: Restrict)
+
+  @@index([sponsorUserId, createdAt])
 }
 
 model AdminFundTransaction {

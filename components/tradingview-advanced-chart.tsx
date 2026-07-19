@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-const WIDGET_SCRIPT="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+export const WIDGET_SCRIPT="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
 const intervals=[{label:"1m",value:"1"},{label:"5m",value:"5"},{label:"15m",value:"15"},{label:"1D",value:"D"}] as const;
 const indicators=[
   {label:"Moving Average",value:"MASimple@tv-basicstudies"},
