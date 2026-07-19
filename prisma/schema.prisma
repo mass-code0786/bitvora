@@ -49,6 +49,7 @@ model User {
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   timezone                    String                       @default("UTC")
+  country                     String?
   sponsor                     User?                        @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
   directReferrals             User[]                       @relation("UserSponsor")
   accounts                    Account[]

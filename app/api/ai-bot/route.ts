@@ -6,16 +6,17 @@ import { AI_BOT_PRICE, AI_BOT_VALIDITY_MS, aiBotStatus } from "@/lib/ai-bot";
 import { createEmptyTradingStore } from "@/lib/ai-trading-engine";
 import { cloneWalletSeed, creditAiBotSponsorIncome, migrateWalletStore, money, purchaseAiBotFromSpot, type WalletStore } from "@/lib/wallet-data";
 import { prisma } from "@/lib/prisma";
+import { formatUserTimestamp, resolveUserTimeZone } from "@/lib/timezone.server";
 
 const purchaseInput=z.object({idempotencyKey:z.string().trim().min(8).max(120)});
 const SPONSOR_PERCENTAGE=10;
 
 export async function GET(){
   try{
-    const user=await requireAuthenticatedUser(),now=new Date();
+    const user=await requireAuthenticatedUser(),now=new Date(),profile=await prisma.user.findUnique({where:{id:user.id},select:{timezone:true,country:true}}),timeZone=resolveUserTimeZone(profile?.timezone,profile?.country);
     await prisma.aiBotSubscription.updateMany({where:{userId:user.id,status:"ACTIVE",expiresAt:{lte:now}},data:{status:"EXPIRED"}});
     const subscription=await prisma.aiBotSubscription.findFirst({where:{userId:user.id},orderBy:{activatedAt:"desc"}});
-    return NextResponse.json({subscription:aiBotStatus(subscription,now.getTime()),price:AI_BOT_PRICE,validityDays:30},{headers:{"Cache-Control":"no-store"}});
+    const view=aiBotStatus(subscription,now.getTime());return NextResponse.json({subscription:{...view,displayActivatedAt:view.activatedAt?formatUserTimestamp(view.activatedAt,timeZone).localDateTime:undefined,displayExpiresAt:view.expiresAt?formatUserTimestamp(view.expiresAt,timeZone).localDateTime:undefined},price:AI_BOT_PRICE,validityDays:30},{headers:{"Cache-Control":"no-store"}});
   }catch{return NextResponse.json({error:"Authentication required."},{status:401})}
 }
 
@@ -53,7 +54,7 @@ export async function POST(request:Request){
       await transaction.aiBotSponsorIncomeAuditLog.create({data:{sponsorIncomeId:sponsorIncome.id,sponsorUserId:sponsor.id,action:"AI_BOT_SPONSOR_INCOME_CREDITED",ledgerTransactionId,metadata:{sponsorUserId:sponsor.id,buyerUserId:buyer.id,buyerUid:buyer.uid,botSubscriptionId:subscription.id,botPurchaseTransactionId:purchaseTransactionId,purchaseAmount,percentage:SPONSOR_PERCENTAGE,commissionAmount,status:"COMPLETED"}}});
       return{subscription,wallet:stored.wallet as unknown as WalletStore,alreadyProcessed:false,sponsorIncome,resultCode:"AI_BOT_SPONSOR_INCOME_CREATED"};
     },{isolationLevel:"Serializable"});
-    return NextResponse.json({...result,subscription:aiBotStatus(result.subscription,now.getTime()),price:AI_BOT_PRICE,validityDays:30},{headers:{"Cache-Control":"no-store"}});
+    const profile=await prisma.user.findUnique({where:{id:user.id},select:{timezone:true,country:true}}),timeZone=resolveUserTimeZone(profile?.timezone,profile?.country),view=aiBotStatus(result.subscription,now.getTime());return NextResponse.json({...result,subscription:{...view,displayActivatedAt:view.activatedAt?formatUserTimestamp(view.activatedAt,timeZone).localDateTime:undefined,displayExpiresAt:view.expiresAt?formatUserTimestamp(view.expiresAt,timeZone).localDateTime:undefined},price:AI_BOT_PRICE,validityDays:30},{headers:{"Cache-Control":"no-store"}});
   }catch(error){
     const message=error instanceof z.ZodError?"Invalid purchase request.":error instanceof Error?error.message:"AI Bot purchase failed.";
     return NextResponse.json({error:message},{status:message.includes("Insufficient")||message.includes("already active")?409:400});

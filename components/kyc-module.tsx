@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, FileCheck2, ShieldAlert } from "lucide-react";
 import { PageHeader } from "./ui";
 
-type SafeKyc={status:"NOT_SUBMITTED"|"PENDING"|"APPROVED"|"REJECTED";submissionVersion:number;maskedDocumentNumber?:string;documentType?:string;reviewedAt?:number|null;rejectionReason?:string|null;notifications:{id:string;title:string;message:string;createdAt:number}[]};
+type SafeKyc={status:"NOT_SUBMITTED"|"PENDING"|"APPROVED"|"REJECTED";submissionVersion:number;maskedDocumentNumber?:string;documentType?:string;reviewedAt?:number|null;reviewedLocalDateTime?:string|null;rejectionReason?:string|null;notifications:{id:string;title:string;message:string;createdAt:number;localDate:string;localDateTime:string}[]};
 const copy={NOT_SUBMITTED:"Verification not submitted",PENDING:"Your documents are under review.",APPROVED:"Your KYC verification is approved.",REJECTED:"Your KYC was rejected. Correct the information and resubmit."};
 
 export function KycModule(){
   const[kyc,setKyc]=useState<SafeKyc|null>(null),[error,setError]=useState(""),[sending,setSending]=useState(false);
   const load=()=>fetch("/api/kyc/me",{cache:"no-store"}).then(r=>r.json()).then(setKyc);
   useEffect(()=>{void load()},[]);
-  const submit=async(event:React.FormEvent<HTMLFormElement>)=>{event.preventDefault();setSending(true);setError("");const response=await fetch("/api/kyc/submit",{method:"POST",body:new FormData(event.currentTarget)}),value=await response.json();if(!response.ok)setError(value.error??"KYC submission failed.");else setKyc(value);setSending(false)};
+  const submit=async(event:React.FormEvent<HTMLFormElement>)=>{event.preventDefault();setSending(true);setError("");const response=await fetch("/api/kyc/submit",{method:"POST",body:new FormData(event.currentTarget)}),value=await response.json();if(!response.ok)setError(value.error??"KYC submission failed.");else await load();setSending(false)};
   if(!kyc)return <p>Loading KYC status…</p>;
   const canSubmit=kyc.status==="NOT_SUBMITTED"||kyc.status==="REJECTED";
   return <div className="wallet-operation">
@@ -20,7 +20,7 @@ export function KycModule(){
       <div className="wallet-deposit-head"><span>{kyc.status==="APPROVED"?<CheckCircle2 size={20}/>:<FileCheck2 size={20}/>}</span><div><p>Current status</p><strong>{kyc.status.replaceAll("_"," ")}</strong></div></div>
       <p className="kyc-copy">{copy[kyc.status]}</p>
       {kyc.status==="REJECTED"&&<div className="wallet-warning-card"><ShieldAlert/><div><strong>Rejection reason</strong><p>{kyc.rejectionReason}</p></div></div>}
-      {kyc.status==="APPROVED"&&<div className="wallet-transfer-summary"><div><span>Document</span><strong>{kyc.documentType} · {kyc.maskedDocumentNumber}</strong></div><div><span>Reviewed</span><strong>{kyc.reviewedAt?new Date(kyc.reviewedAt).toLocaleString():"—"}</strong></div><div><span>Withdrawal</span><strong>Eligible</strong></div></div>}
+      {kyc.status==="APPROVED"&&<div className="wallet-transfer-summary"><div><span>Document</span><strong>{kyc.documentType} · {kyc.maskedDocumentNumber}</strong></div><div><span>Reviewed</span><strong>{kyc.reviewedLocalDateTime??"—"}</strong></div><div><span>Withdrawal</span><strong>Eligible</strong></div></div>}
       {kyc.status==="PENDING"&&<div className="admin-banner">Your documents are under review. Another submission cannot be created.</div>}
     </section>
     {canSubmit&&<form className="wallet-form-card kyc-form" onSubmit={submit}>
@@ -37,7 +37,7 @@ export function KycModule(){
       {error&&<div className="admin-banner">{error}</div>}
       <button className="wallet-primary-button" disabled={sending}>{sending?"Uploading…":"Submit KYC"}</button>
     </form>}
-    <section><div className="wallet-section-heading"><h2>KYC notifications</h2></div><div className="wallet-mini-history">{kyc.notifications.map(item=><div key={item.id}><span>{new Date(item.createdAt).toLocaleDateString()}</span><div><strong>{item.title}</strong><p>{item.message}</p></div></div>)}</div></section>
+    <section><div className="wallet-section-heading"><h2>KYC notifications</h2></div><div className="wallet-mini-history">{kyc.notifications.map(item=><div key={item.id}><span>{item.localDate}</span><div><strong>{item.title}</strong><p>{item.message}</p></div></div>)}</div></section>
     <Link className="secondary-button w-full" href="/profile">Back to profile</Link>
   </div>;
 }

@@ -3,7 +3,7 @@ import { cloneWalletSeed, creditAiBotSponsorIncome, creditSpotDeposit, type Wall
 
 const mocks=vi.hoisted(()=>({auth:vi.fn(),transaction:vi.fn()}));
 vi.mock("@/lib/auth/server",()=>({requireAuthenticatedUser:mocks.auth}));
-vi.mock("@/lib/prisma",()=>({prisma:{$transaction:mocks.transaction,aiBotSubscription:{updateMany:vi.fn(),findFirst:vi.fn()}}}));
+vi.mock("@/lib/prisma",()=>({prisma:{$transaction:mocks.transaction,aiBotSubscription:{updateMany:vi.fn(),findFirst:vi.fn()},user:{findUnique:vi.fn().mockResolvedValue({timezone:"Asia/Kolkata",country:"India"})}}}));
 import { POST } from "@/app/api/ai-bot/route";
 
 const request=(key:string)=>new Request("http://localhost/api/ai-bot",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idempotencyKey:key})});

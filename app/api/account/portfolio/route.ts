@@ -3,14 +3,13 @@ import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { migrateWalletStore, money } from "@/lib/wallet-data";
 import { prisma } from "@/lib/prisma";
 import { calculatePortfolioGrowth } from "@/lib/portfolio-growth";
-
-const localDate=(timestamp:number,timezone:string)=>new Intl.DateTimeFormat("en-CA",{timeZone:timezone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(timestamp));
+import { localCalendarDate, resolveUserTimeZone } from "@/lib/timezone.server";
 
 export async function GET(){
   try{
-    const authUser=await requireAuthenticatedUser(),user=await prisma.user.findUnique({where:{id:authUser.id},select:{timezone:true,state:{select:{wallet:true}}}});
+    const authUser=await requireAuthenticatedUser(),user=await prisma.user.findUnique({where:{id:authUser.id},select:{timezone:true,country:true,state:{select:{wallet:true}}}});
     if(!user)throw new Error("UNAUTHENTICATED");
-    const timezone=user.timezone||"UTC",today=localDate(Date.now(),timezone),wallet=migrateWalletStore(user.state?.wallet),spotWallet=money(wallet.wallets.spot.balance),futureWallet=money(wallet.wallets.future.balance),totalWallet=money(spotWallet+futureWallet);
+    const timezone=resolveUserTimeZone(user.timezone,user.country),today=localCalendarDate(Date.now(),timezone),wallet=migrateWalletStore(user.state?.wallet),spotWallet=money(wallet.wallets.spot.balance),futureWallet=money(wallet.wallets.future.balance),totalWallet=money(spotWallet+futureWallet);
     const baseline=await prisma.portfolioSnapshot.upsert({where:{userId_localDate:{userId:authUser.id,localDate:today}},create:{userId:authUser.id,localDate:today,timezone,spotBalance:spotWallet,futureBalance:futureWallet,totalBalance:totalWallet},update:{}}),baselineTotal=money(Number(baseline.totalBalance)),growthPercent=calculatePortfolioGrowth(totalWallet,baselineTotal);
     return NextResponse.json({spotWalletBalance:spotWallet.toFixed(2),futureWalletBalance:futureWallet.toFixed(2),totalWalletBalance:totalWallet.toFixed(2),baselineTotalBalance:baselineTotal.toFixed(2),growthPercent},{headers:{"Cache-Control":"no-store"}})
   }catch{return NextResponse.json({error:"Portfolio unavailable."},{status:401})}
