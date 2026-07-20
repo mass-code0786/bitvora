@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { requireAdminUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+import { decodeCursor, encodeCursor, pageSize } from "@/lib/support-pagination";
+export async function GET(request:Request){try{await requireAdminUser();const url=new URL(request.url),take=pageSize(url.searchParams.get("limit")),cursor=decodeCursor(url.searchParams.get("cursor")),rows=await prisma.supportUnmatchedQuery.findMany({where:{status:"OPEN",...(cursor?{OR:[{createdAt:{lt:cursor.at}},{createdAt:cursor.at,id:{lt:cursor.id}}]}:{})},select:{id:true,message:true,normalizedMessage:true,status:true,createdAt:true,user:{select:{uid:true}}},orderBy:[{createdAt:"desc"},{id:"desc"}],take:take+1}),hasMore=rows.length>take,queries=hasMore?rows.slice(0,take):rows,last=queries.at(-1);return NextResponse.json({queries,nextCursor:hasMore&&last?encodeCursor(last.createdAt,last.id):null},{headers:{"Cache-Control":"private, no-store"}})}catch{return NextResponse.json({error:"Admin access required."},{status:401})}}

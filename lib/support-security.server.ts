@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SUPPORT_MESSAGE_LIMIT=4000;
-export const SUPPORT_ATTACHMENT_LIMIT=Math.min(5*1024*1024,Math.max(1024,Number(process.env.AI_SUPPORT_ATTACHMENT_MAX_BYTES)||5*1024*1024));
+export const SUPPORT_ATTACHMENT_LIMIT=Math.min(5*1024*1024,Math.max(1024,Number(process.env.SUPPORT_ATTACHMENT_MAX_BYTES)||5*1024*1024));
 export const SUPPORT_ATTACHMENT_TYPES=new Set(["image/jpeg","image/png","image/webp","application/pdf"]);
 const TOKEN_TTL_MS=2*60*60*1000;
 const secret=()=>process.env.AUTH_SECRET||process.env.NEXTAUTH_SECRET||"";
@@ -23,4 +23,3 @@ export function assertMutationRequest(request:Request,userId:string){
   if(!origin&&!site)throw new Error("MISSING_REQUEST_PROVENANCE");
   if(!verifyCsrfToken(request.headers.get("x-csrf-token"),userId))throw new Error("INVALID_CSRF_TOKEN");
 }
-

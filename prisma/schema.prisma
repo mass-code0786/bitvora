@@ -74,9 +74,10 @@ model User {
   preferences                 UserPreference?
   supportTickets              SupportTicket[]
   supportChatSessions         ChatSession[]
-  supportRestrictions         AiSupportRestriction?
+  supportRestrictions         SupportChatRestriction?
   supportAuditLogsPerformed   SupportAuditLog[]            @relation("SupportAuditAdmin")
   supportAuditLogsTargeted    SupportAuditLog[]            @relation("SupportAuditTarget")
+  supportUnmatchedQueries     SupportUnmatchedQuery[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -145,18 +146,17 @@ model ChatMessage {
   conversationId String
   role           String
   message        String
-  generationId   String?     @unique
   idempotencyKey String?     @unique
-  generationStatus String?
-  startedAt      DateTime?
-  completedAt    DateTime?
-  failureCode    String?
+  matchedIntent  String?
+  supportRuleId  String?
+  matchScore     Float?
   createdAt      DateTime    @default(now())
   conversation   ChatSession @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  supportRule    SupportRule? @relation(fields: [supportRuleId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
   @@index([conversationId, createdAt, id])
-  @@index([generationStatus, startedAt])
+  @@index([supportRuleId, createdAt])
   @@index([createdAt])
 }
 
@@ -172,7 +172,7 @@ model SupportReply {
   @@index([adminId, createdAt])
 }
 
-model AiSupportRestriction {
+model SupportChatRestriction {
   id        String   @id @default(cuid())
   userId    String   @unique
   banned    Boolean  @default(false)
@@ -200,6 +200,42 @@ model SupportAuditLog {
   @@index([targetUserId, createdAt, id])
   @@index([chatSessionId, createdAt, id])
   @@index([ticketId, createdAt, id])
+}
+
+model SupportRule {
+  id             String   @id @default(cuid())
+  intentKey      String   @unique
+  category       String
+  title          String
+  response       String
+  keywordsJson   Json
+  examplesJson   Json
+  followUpsJson  Json
+  priority       Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  messages       ChatMessage[]
+  resolvedQueries SupportUnmatchedQuery[]
+
+  @@index([isActive, priority, intentKey])
+  @@index([category, isActive, priority])
+}
+
+model SupportUnmatchedQuery {
+  id                String       @id @default(cuid())
+  userId            String
+  message           String
+  normalizedMessage String
+  resolvedRuleId    String?
+  status            String       @default("OPEN")
+  createdAt         DateTime     @default(now())
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolvedRule      SupportRule? @relation(fields: [resolvedRuleId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt, id])
+  @@index([userId, createdAt, id])
+  @@index([resolvedRuleId, createdAt])
 }
 
 model SupportConfiguration {
