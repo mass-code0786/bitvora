@@ -50,6 +50,8 @@ model User {
   updatedAt                   DateTime                     @updatedAt
   timezone                    String                       @default("UTC")
   country                     String?
+  countryName                 String?
+  countryCode                 String?                      @db.VarChar(2)
   sponsor                     User?                        @relation("UserSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
   directReferrals             User[]                       @relation("UserSponsor")
   accounts                    Account[]

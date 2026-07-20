@@ -9,7 +9,7 @@ vi.mock("@/lib/auth/uid", () => ({ generateUniqueUserUid: mocks.generateUid }));
 vi.mock("@/lib/rank-recalculation.server",()=>({recalculateAuthoritativeNetwork:mocks.recalculate}));
 import { registerUser } from "@/lib/auth/registration";
 
-const input = { name: "Alex Morgan", email: "alex@example.com", password: "password123" };
+const input = { name: "Alex Morgan", email: "alex@example.com", password: "password123", countryCode:"US" };
 
 describe("registration service", () => {
   beforeEach(() => { vi.clearAllMocks(); mocks.hashPassword.mockResolvedValue("hash"); mocks.generateUid.mockResolvedValue("BV123456"); });
@@ -28,4 +28,5 @@ describe("registration service", () => {
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ sponsorId: "sponsor-internal", sponsorUid: "BV100001", uid: "BV123456" }) }));
     expect(mocks.recalculate).toHaveBeenCalledOnce();
   });
+  it("stores the canonical country name and ISO code",async()=>{mocks.findUnique.mockResolvedValueOnce(null);mocks.create.mockResolvedValue({uid:"BV123456",email:input.email,name:input.name,role:"USER",createdAt:new Date()});await registerUser({...input,countryCode:"IN"});expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({country:"India",countryName:"India",countryCode:"IN"})}))});
 });

@@ -7,13 +7,14 @@ import { isValidUserUid, normalizeEmail, normalizeUserUid } from "./normalizatio
 import { generateUniqueUserUid } from "./uid";
 import { recalculateAuthoritativeNetwork } from "@/lib/rank-recalculation.server";
 import { isValidIanaTimeZone, resolveUserTimeZone } from "@/lib/timezone.server";
+import { countryName, isCountryCode } from "@/lib/countries";
 
 export const registrationSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(100),
   email: z.string().trim().email("Enter a valid email address.").transform(normalizeEmail),
   password: z.string().min(8, "Password must be at least 8 characters.").refine(value => value.trim().length >= 8, "Password cannot be whitespace only."),
   referralUid: z.string().trim().optional().transform(value => value ? normalizeUserUid(value) : undefined).refine(value => !value || isValidUserUid(value), "Invalid referral UID."),
-  country:z.string().trim().min(2).max(80).optional(),
+  countryCode:z.string({message:"Please select your country."}).trim().toUpperCase().length(2,"Please select your country.").refine(isCountryCode,"Please select your country."),
   timezone:z.string().trim().refine(isValidIanaTimeZone,"Select a valid timezone.").optional(),
 });
 
@@ -36,8 +37,8 @@ export async function registerUser(input: RegistrationInput): Promise<SafeRegist
         : null;
       if (data.referralUid && !sponsor) throw new RegistrationError("INVALID_REFERRAL", "Invalid referral UID.");
       const uid = await generateUniqueUserUid(tx);
-      const created=await tx.user.create({
-        data: { uid, email: data.email, passwordHash, name: data.name, sponsorId: sponsor?.id, sponsorUid: sponsor?.uid,country:data.country,timezone:resolveUserTimeZone(data.timezone,data.country) },
+      const selectedCountryName=countryName(data.countryCode),created=await tx.user.create({
+        data: { uid, email: data.email, passwordHash, name: data.name, sponsorId: sponsor?.id, sponsorUid: sponsor?.uid,country:selectedCountryName,countryName:selectedCountryName,countryCode:data.countryCode,timezone:resolveUserTimeZone(data.timezone,selectedCountryName) },
         select: { uid: true, email: true, name: true, role: true, createdAt: true },
       });
       await recalculateAuthoritativeNetwork(tx);return created;
