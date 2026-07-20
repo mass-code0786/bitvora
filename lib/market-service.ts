@@ -2,11 +2,14 @@ import type { CoinDefinition } from "./coins";
 
 export type MarketCoin = CoinDefinition & { price:number;change:number;volume:number;high:number;low:number;marketCap:number;sparkline:number[];isLive:boolean };
 type BinanceTicker = {symbol:string;lastPrice:string;openPrice:string;highPrice:string;lowPrice:string;quoteVolume:string};
+type BinanceKline = [number,string,string,string,string,...unknown[]];
 export type LiveUpdate = {symbol:string;price:number;change:number;volume:number;high:number;low:number};
 
 const REST_BASE="https://data-api.binance.vision";
 const WS_BASE="wss://data-stream.binance.vision/stream?streams=";
 const TIMEOUT_MS=8000;
+const SPARKLINE_CANDLES=30;
+const sparklineCache=new Map<string,number[]>();
 
 export function fallbackMarkets(coins:CoinDefinition[]):MarketCoin[]{return coins.map(coin=>({
   ...coin,price:0,change:0,volume:0,marketCap:0,
@@ -30,8 +33,19 @@ export async function fetchMarketBatch(coins:CoinDefinition[],signal?:AbortSigna
     const ticker=bySymbol.get(`${coin.symbol}USDT`); if(!ticker)return fallbackMarkets([coin])[0];
     const price=Number(ticker.lastPrice); const open=Number(ticker.openPrice); const change=open?((price-open)/open)*100:0;
     const high=Number(ticker.highPrice),low=Number(ticker.lowPrice);
-    return {...coin,price,change,volume:Number(ticker.quoteVolume),high,low,marketCap:0,sparkline:[open,low,high,price].filter(Number.isFinite),isLive:true};
+    return {...coin,price,change,volume:Number(ticker.quoteVolume),high,low,marketCap:0,sparkline:[],isLive:true};
   });
+}
+
+export async function fetchSparklineHistory(symbol:string,signal?:AbortSignal):Promise<number[]>{
+  const normalized=symbol.toUpperCase().replace(/USDT$/,"");
+  const cached=sparklineCache.get(normalized);if(cached)return cached;
+  const response=await fetchWithTimeout(`${REST_BASE}/api/v3/klines?symbol=${normalized}USDT&interval=1h&limit=${SPARKLINE_CANDLES}`,signal);
+  if(!response.ok)throw new Error(`Binance kline request failed for ${normalized} (${response.status})`);
+  const candles=await response.json() as BinanceKline[];
+  const closes=candles.map(candle=>Number(candle[4])).filter(value=>Number.isFinite(value)&&value>0);
+  if(closes.length)sparklineCache.set(normalized,closes);
+  return closes;
 }
 
 export function connectVisibleMarkets(symbols:string[],onUpdate:(update:LiveUpdate)=>void,onStatus:(connected:boolean)=>void){

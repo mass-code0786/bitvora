@@ -1,11 +1,13 @@
 "use client";
 
+import { useId, useMemo } from "react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { formatCurrency } from "@/lib/currency";
 
 export function Sparkline({ data, color = "#1687ff" }: { data: number[]; color?: string }) {
-  const values = data.map((value, index) => ({ index, value }));
-  return <ResponsiveContainer width="100%" height="100%"><AreaChart data={values}><defs><linearGradient id={`spark-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={.35}/><stop offset="100%" stopColor={color} stopOpacity={0}/></linearGradient></defs><Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} fill={`url(#spark-${color.replace("#", "")})`} dot={false}/></AreaChart></ResponsiveContainer>;
+  const gradientId=`spark-${useId().replaceAll(":","")}`;
+  const values=useMemo(()=>{const finite=data.filter(Number.isFinite);if(!finite.length)return[];const minimum=Math.min(...finite),maximum=Math.max(...finite),range=maximum-minimum,normalized=finite.map((value,index)=>({index,value:range?(value-minimum)/range:.5}));return normalized.length===1?[normalized[0],{...normalized[0],index:1}]:normalized},[data]);
+  return <ResponsiveContainer width="100%" height="100%"><AreaChart data={values} margin={{top:2,right:1,bottom:2,left:1}}><defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={.28}/><stop offset="100%" stopColor={color} stopOpacity={0}/></linearGradient></defs><Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill={`url(#${gradientId})`} dot={false} activeDot={false} isAnimationActive={false}/></AreaChart></ResponsiveContainer>;
 }
 
 export function EarningsChart({earnings=[]}:{earnings?:Array<{day:string;value:number}>}) {

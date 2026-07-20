@@ -13,10 +13,10 @@ const TOP_SYMBOLS=["BTC","ETH","BNB","SOL"];
 const TOP_COINS=TOP_SYMBOLS.map(symbol=>COIN_CATALOGUE.find(coin=>coin.symbol===symbol)).filter((coin):coin is NonNullable<typeof coin>=>Boolean(coin));
 
 const TopCoinCard=memo(function TopCoinCard({coin}:{coin:MarketCoin}){
-  const[logoError,setLogoError]=useState(false),positive=coin.change>=0,color=positive?"#43d79b":"#f06478";
+  const[logoError,setLogoError]=useState(false),direction=coin.change>0?"positive":coin.change<0?"negative":"text-slate-400",color=direction==="positive"?"#43d79b":direction==="negative"?"#f06478":"#7d8291";
   return <Link href={`/markets/${coin.symbol.toLowerCase()}`} className="top-coin-card" aria-label={`Open ${coin.pair} market`}>
     <div className="top-coin-identity">{logoError?<span>{coin.symbol.slice(0,2)}</span>:<Image src={coin.logo} alt={`${coin.name} logo`} width={34} height={34} unoptimized onError={()=>setLogoError(true)}/>}<div><strong>{coin.symbol}</strong><small>{coin.name}</small></div></div>
-    <div className="top-coin-quote" aria-live="polite"><strong>{coin.isLive?formatCurrency(coin.price,{maximumFractionDigits:coin.price<1?6:2}):"$—"}</strong><span className={positive?"positive":"negative"}>{positive?"+":""}{coin.change.toFixed(2)}%</span></div>
+    <div className="top-coin-quote" aria-live="polite"><strong>{coin.isLive?formatCurrency(coin.price,{maximumFractionDigits:coin.price<1?6:2}):"$—"}</strong><span className={direction}>{coin.change>0?"+":""}{coin.change.toFixed(2)}%</span></div>
     <div className="top-coin-spark" aria-hidden="true"><Sparkline data={coin.sparkline} color={color}/></div>
   </Link>;
 });
