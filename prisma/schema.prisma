@@ -69,9 +69,50 @@ model User {
   referralDistributions       ReferralDistribution[]       @relation("ReferralSource")
   referralIncomeEntries       ReferralIncomeEntry[]        @relation("ReferralRecipient")
   referralIncomeAuditLogs     ReferralIncomeAuditLog[]     @relation("ReferralAuditRecipient")
+  preferences                 UserPreference?
+  supportTickets              SupportTicket[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
+}
+
+model UserPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  language           String   @default("en")
+  currency           String   @default("USD")
+  emailNotifications Boolean  @default(true)
+  pushNotifications  Boolean  @default(true)
+  tradeNotifications Boolean  @default(true)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model SupportTicket {
+  id         String   @id @default(cuid())
+  userId     String
+  subject    String
+  category   String
+  message    String
+  status     String   @default("OPEN")
+  adminReply String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model SupportConfiguration {
+  id            String   @id @default("default")
+  supportEmail  String?
+  whatsappUrl   String?
+  telegramUrl   String?
+  helpCenterUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model ReferralDistribution {

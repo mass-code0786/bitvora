@@ -1,0 +1,12 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAdminUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+
+const ticketInput=z.object({id:z.string().min(1),status:z.enum(["OPEN","IN_PROGRESS","RESOLVED","CLOSED"]),adminReply:z.string().trim().max(4000)}).strict();
+const optionalUrl=z.union([z.literal(""),z.string().url().max(500)]);
+const configInput=z.object({supportEmail:z.union([z.literal(""),z.string().email().max(254)]),whatsappUrl:optionalUrl,telegramUrl:optionalUrl,helpCenterUrl:optionalUrl}).strict();
+const nullable=(value:string)=>value||null;
+export async function GET(){try{await requireAdminUser();const[tickets,configuration]=await Promise.all([prisma.supportTicket.findMany({include:{user:{select:{uid:true,name:true,email:true}}},orderBy:{updatedAt:"desc"},take:300}),prisma.supportConfiguration.findUnique({where:{id:"default"}})]);return NextResponse.json({tickets,configuration:configuration??{supportEmail:"",whatsappUrl:"",telegramUrl:"",helpCenterUrl:""}},{headers:{"Cache-Control":"private, no-store"}})}catch{return NextResponse.json({error:"Admin access required."},{status:401})}}
+export async function PATCH(request:Request){try{await requireAdminUser();const value=ticketInput.parse(await request.json()),ticket=await prisma.supportTicket.update({where:{id:value.id},data:{status:value.status,adminReply:nullable(value.adminReply)}});return NextResponse.json({ticket,message:"Ticket updated."})}catch(error){return NextResponse.json({error:error instanceof z.ZodError?error.issues[0]?.message??"Invalid ticket update.":"Unable to update ticket."},{status:400})}}
+export async function PUT(request:Request){try{await requireAdminUser();const value=configInput.parse(await request.json()),configuration=await prisma.supportConfiguration.upsert({where:{id:"default"},create:{id:"default",supportEmail:nullable(value.supportEmail),whatsappUrl:nullable(value.whatsappUrl),telegramUrl:nullable(value.telegramUrl),helpCenterUrl:nullable(value.helpCenterUrl)},update:{supportEmail:nullable(value.supportEmail),whatsappUrl:nullable(value.whatsappUrl),telegramUrl:nullable(value.telegramUrl),helpCenterUrl:nullable(value.helpCenterUrl)}});return NextResponse.json({configuration,message:"Support contact settings saved."})}catch(error){return NextResponse.json({error:error instanceof z.ZodError?error.issues[0]?.message??"Invalid support settings.":"Unable to save support settings."},{status:400})}}

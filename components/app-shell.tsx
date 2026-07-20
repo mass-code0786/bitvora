@@ -11,7 +11,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { AiBotRunner } from "./ai-bot-runner";
 
 const nav=[{href:"/home",label:"Home",icon:House},{href:"/markets",label:"Markets",icon:ChartNoAxesCombined},{href:"/trade",label:"Trade",icon:Zap,primary:true},{href:"/team",label:"Team",icon:UsersRound},{href:"/profile",label:"Profile",icon:CircleUserRound}];
-const menu=[{href:"/profile",label:"Profile",icon:CircleUserRound},{href:"/profile/kyc",label:"KYC Verification",icon:FileCheck2},{href:"/history",label:"Transaction History",icon:History},{href:"/profile",label:"Settings",icon:Settings},{href:"/profile",label:"Support",icon:Headphones}];
+const menu=[{href:"/profile",label:"Profile",icon:CircleUserRound},{href:"/kyc",label:"KYC Verification",icon:FileCheck2},{href:"/transactions",label:"Transaction History",icon:History},{href:"/settings",label:"Settings",icon:Settings},{href:"/support",label:"Support",icon:Headphones}];
 type HeaderNotification={id:string;title:string;message:string;type:string;createdAt:number;localDateTime:string};
 
 export function AppShell({children}:{children:ReactNode}) {
