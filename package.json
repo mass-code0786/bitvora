@@ -18,6 +18,8 @@
     "referral:backfill": "tsx scripts/backfill-first-transfer-referral.ts",
     "network:recalculate": "tsx scripts/recalculate-network.ts",
     "db:studio": "prisma studio"
+    ,"support:production-check": "tsx scripts/support-production-check.ts"
+    ,"support:query-diagnostics": "tsx scripts/support-query-diagnostics.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
