@@ -73,6 +73,8 @@ model User {
   referralIncomeAuditLogs     ReferralIncomeAuditLog[]     @relation("ReferralAuditRecipient")
   preferences                 UserPreference?
   supportTickets              SupportTicket[]
+  supportChatSessions         ChatSession[]
+  supportRestrictions         AiSupportRestriction?
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -99,12 +101,73 @@ model SupportTicket {
   message    String
   status     String   @default("OPEN")
   adminReply String?
+  priority   String   @default("NORMAL")
+  sessionId  String?
+  attachmentName     String?
+  attachmentMimeType String?
+  attachmentSize     Int?
+  attachmentData     Bytes?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session    ChatSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  replies    SupportReply[]
 
   @@index([userId, createdAt])
   @@index([status, updatedAt])
+  @@index([sessionId, createdAt])
+}
+
+model ChatSession {
+  id            String        @id @default(cuid())
+  userId        String
+  title         String        @default("New conversation")
+  unreadCount   Int           @default(0)
+  lastMessageAt DateTime      @default(now())
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages      ChatMessage[]
+  tickets       SupportTicket[]
+
+  @@index([userId, deletedAt, lastMessageAt])
+}
+
+model ChatMessage {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           String
+  message        String
+  createdAt      DateTime    @default(now())
+  conversation   ChatSession @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([createdAt])
+}
+
+model SupportReply {
+  id        String        @id @default(cuid())
+  ticketId  String
+  adminId   String
+  message   String
+  createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model AiSupportRestriction {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  banned    Boolean  @default(false)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([banned, updatedAt])
 }
 
 model SupportConfiguration {

@@ -1,0 +1,10 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+import { assertSameOrigin } from "@/lib/support-security.server";
+const rename=z.object({title:z.string().trim().min(1).max(80)}).strict();
+export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){try{const user=await requireAuthenticatedUser(),{id}=await params,session=await prisma.chatSession.findFirst({where:{id,userId:user.id,deletedAt:null},include:{messages:{orderBy:{createdAt:"asc"}},tickets:{orderBy:{createdAt:"desc"},include:{replies:{orderBy:{createdAt:"asc"}}}}}});if(!session)return NextResponse.json({error:"Chat not found."},{status:404});if(session.unreadCount)await prisma.chatSession.update({where:{id},data:{unreadCount:0}});return NextResponse.json({session:{...session,unreadCount:0}},{headers:{"Cache-Control":"private, no-store"}})}catch{return NextResponse.json({error:"Authentication required."},{status:401})}}
+export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){try{assertSameOrigin(request);const user=await requireAuthenticatedUser(),{id}=await params,value=rename.parse(await request.json()),result=await prisma.chatSession.updateMany({where:{id,userId:user.id,deletedAt:null},data:{title:value.title}});if(!result.count)return NextResponse.json({error:"Chat not found."},{status:404});return NextResponse.json({message:"Chat renamed."})}catch(error){return NextResponse.json({error:error instanceof z.ZodError?"Enter a valid chat name.":"Unable to rename chat."},{status:400})}}
+export async function DELETE(request:Request,{params}:{params:Promise<{id:string}>}){try{assertSameOrigin(request);const user=await requireAuthenticatedUser(),{id}=await params,result=await prisma.chatSession.updateMany({where:{id,userId:user.id,deletedAt:null},data:{deletedAt:new Date()}});if(!result.count)return NextResponse.json({error:"Chat not found."},{status:404});return NextResponse.json({message:"Chat deleted."})}catch{return NextResponse.json({error:"Unable to delete chat."},{status:400})}}
+

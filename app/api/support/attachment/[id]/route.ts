@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){try{const user=await requireAuthenticatedUser(),{id}=await params,ticket=await prisma.supportTicket.findFirst({where:{id,...(user.role==="ADMIN"?{}:{userId:user.id})},select:{attachmentData:true,attachmentMimeType:true,attachmentName:true}});if(!ticket?.attachmentData)return NextResponse.json({error:"Attachment not found."},{status:404});return new Response(ticket.attachmentData,{headers:{"content-type":ticket.attachmentMimeType??"application/octet-stream","content-disposition":`inline; filename="${(ticket.attachmentName??"attachment").replace(/["\r\n]/g,"")}"`,"cache-control":"private, no-store","x-content-type-options":"nosniff"}})}catch{return NextResponse.json({error:"Authentication required."},{status:401})}}
