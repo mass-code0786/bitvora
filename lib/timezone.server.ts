@@ -1,5 +1,3 @@
-import "server-only";
-
 export type LocalTimestamp={timestampUtc:string;localDate:string;localTime:string;localDateTime:string};
 const countryZones:Record<string,string>={india:"Asia/Kolkata",bangladesh:"Asia/Dhaka",pakistan:"Asia/Karachi","united arab emirates":"Asia/Dubai",uae:"Asia/Dubai","united kingdom":"Europe/London",uk:"Europe/London","united states":"America/New_York",usa:"America/New_York"};
 
