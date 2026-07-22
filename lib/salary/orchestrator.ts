@@ -1,4 +1,3 @@
-import "server-only";
 import { Prisma,type SalaryCycle } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { evaluateSalaryCandidates } from "./eligibility";

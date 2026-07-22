@@ -1,4 +1,3 @@
-import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createEmptyTradingStore } from "@/lib/ai-trading-engine";
