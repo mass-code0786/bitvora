@@ -30,7 +30,7 @@ export const ranks = [
 
 export const salaryPlan = {
   frequencyLabel: "Twice monthly",
-  paymentDays: [1, 15] as const,
+  paymentDays: [1, 16] as const,
   cyclesPerYear: 24,
 };
 

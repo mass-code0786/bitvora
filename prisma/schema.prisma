@@ -66,6 +66,29 @@ enum AiOutboxStatus {
   DEAD
 }
 
+enum SalaryCycleStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+enum SalaryEligibilityStatus {
+  ELIGIBLE
+  UNQUALIFIED
+  NO_RANK
+  BLOCKED
+  ERROR
+}
+
+enum SalaryPaymentStatus {
+  PENDING
+  PAID
+  SKIPPED
+  FAILED
+}
+
 model User {
   id                          String                       @id @default(cuid())
   uid                         String                       @unique @db.VarChar(8)
@@ -111,6 +134,8 @@ model User {
   supportAuditLogsTargeted    SupportAuditLog[]            @relation("SupportAuditTarget")
   supportUnmatchedQueries     SupportUnmatchedQuery[]
   nowPaymentsDeposits         NowPaymentsDeposit[]
+  salaryPayments              SalaryPayment[]
+  salaryLedger                SalaryLedger[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -670,6 +695,70 @@ model UserNotification {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+}
+
+model SalaryCycle {
+  id               String            @id @default(cuid())
+  cycleKey         String            @unique
+  scheduledAt      DateTime
+  officialTimeZone String
+  status           SalaryCycleStatus @default(PENDING)
+  totalCandidates  Int               @default(0)
+  totalEligible    Int               @default(0)
+  totalPaid        Int               @default(0)
+  totalSkipped     Int               @default(0)
+  totalFailed      Int               @default(0)
+  totalAmount      Decimal           @default(0) @db.Decimal(24, 2)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  payments         SalaryPayment[]
+
+  @@index([status, scheduledAt])
+  @@index([scheduledAt])
+}
+
+model SalaryPayment {
+  id                      String                  @id @default(cuid())
+  salaryCycleId           String
+  userId                  String
+  evaluatedRank           Int                     @default(0)
+  salaryAmount            Decimal                 @default(0) @db.Decimal(24, 2)
+  eligibilityStatus       SalaryEligibilityStatus
+  eligibilitySnapshotJson Json
+  paymentStatus           SalaryPaymentStatus     @default(PENDING)
+  skipReason              String?
+  ledgerKey               String                  @unique
+  paidAt                   DateTime?
+  failureCode              String?
+  attempts                 Int                     @default(0)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  cycle                    SalaryCycle             @relation(fields: [salaryCycleId], references: [id], onDelete: Restrict)
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledger                   SalaryLedger?
+
+  @@unique([salaryCycleId, userId])
+  @@index([salaryCycleId, paymentStatus])
+  @@index([userId, createdAt])
+}
+
+model SalaryLedger {
+  id             String        @id @default(cuid())
+  idempotencyKey String        @unique
+  salaryPaymentId String       @unique
+  salaryCycleId  String
+  userId         String
+  amount         Decimal       @db.Decimal(24, 2)
+  balanceBefore  Decimal       @db.Decimal(24, 2)
+  balanceAfter   Decimal       @db.Decimal(24, 2)
+  createdAt      DateTime      @default(now())
+  payment        SalaryPayment @relation(fields: [salaryPaymentId], references: [id], onDelete: Restrict)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([salaryCycleId, createdAt])
   @@index([userId, createdAt])
 }
 

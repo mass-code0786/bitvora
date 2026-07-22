@@ -1,0 +1,6 @@
+import { Worker,type Job } from "bullmq";
+import { prisma } from "@/lib/prisma";
+import { salaryConfig } from "./config";
+import { getSalaryDeadLetterQueue,salaryRedisConnection } from "./queue";
+import { finalizeSalaryCycle,paySalary,SalaryPaymentError } from "./service";
+export function createSalaryWorker(){return new Worker("salary-payment-v1",async(job:Job<{paymentId:string;cycleId:string}>)=>{try{const result=await paySalary(job.data.paymentId);await finalizeSalaryCycle(job.data.cycleId);return{paymentId:result.id,status:result.paymentStatus}}catch(error){const transient=error instanceof SalaryPaymentError?error.transient:true,last=job.attemptsMade+1>=salaryConfig.SALARY_MAX_RETRIES,code=error instanceof SalaryPaymentError?error.code:"TRANSIENT_DATABASE_ERROR";await prisma.salaryPayment.updateMany({where:{id:job.data.paymentId,paymentStatus:{not:"PAID"}},data:{paymentStatus:last?"FAILED":"PENDING",failureCode:code,attempts:{increment:1}}});if(last){await getSalaryDeadLetterQueue().add("salary-dead-letter",{...job.data,sourceJobId:job.id,failureCode:code},{jobId:`SALARY_DLQ:${job.data.paymentId}`,attempts:1});await finalizeSalaryCycle(job.data.cycleId)}if(transient&&!last)throw error;return null}},{connection:salaryRedisConnection(),concurrency:salaryConfig.SALARY_QUEUE_CONCURRENCY})}

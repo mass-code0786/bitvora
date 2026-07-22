@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+import { evaluateSalaryCandidates } from "@/lib/salary/eligibility";
+import { nextSalaryDate } from "@/lib/salary/schedule";
+import { salaryConfig } from "@/lib/salary/config";
+export async function GET(){try{const auth=await requireAuthenticatedUser(),users=await prisma.user.findMany({select:{id:true,uid:true,sponsorUid:true,state:{select:{wallet:true,trading:true}}}}),current=evaluateSalaryCandidates(users,new Date()).find(row=>row.userId===auth.id),payments=await prisma.salaryPayment.findMany({where:{userId:auth.id},include:{cycle:{select:{cycleKey:true,scheduledAt:true,officialTimeZone:true}}},orderBy:{createdAt:"desc"},take:50}),next=nextSalaryDate(new Date(),salaryConfig.SALARY_TIME_ZONE);return NextResponse.json({currentRank:current?.rank??0,currentSalaryAmount:current?.amount??0,eligible:current?.eligible??false,skipReason:current?.skipReason??"NO_CURRENT_RANK",snapshot:current?.snapshot??null,nextSalaryAt:next.scheduledAt,timeZone:salaryConfig.SALARY_TIME_ZONE,lastPayment:payments.find(item=>item.paymentStatus==="PAID")??null,history:payments.map(item=>({...item,salaryAmount:item.salaryAmount.toFixed(2)}))},{headers:{"Cache-Control":"private, no-store"}})}catch{return NextResponse.json({error:"Authentication required."},{status:401})}}

@@ -33,6 +33,12 @@
     "ai-trade:reconcile": "tsx scripts/ai-trade-audit.ts reconcile",
     "ai-trade:settlement-audit": "tsx scripts/ai-trade-audit.ts settlement",
     "ai-trade:load-test": "vitest run test/ai-trade-20000-load.test.ts --configLoader runner",
+    "salary:scheduler": "tsx scripts/salary-scheduler.ts",
+    "salary:worker": "tsx scripts/salary-worker.ts",
+    "salary:audit": "tsx scripts/salary-audit.ts",
+    "salary:reconcile": "tsx scripts/salary-audit.ts --repair",
+    "salary:run-current": "tsx scripts/salary-run-current.ts",
+    "salary:dry-run": "tsx scripts/salary-dry-run.ts",
     "diagnose:navigation": "node scripts/diagnose-client-navigation.mjs"
   },
   "dependencies": {

@@ -5,5 +5,7 @@ module.exports={apps:[
   tsx("bitvora-ai-session-orchestrator","scripts/ai-trade-session-orchestrator.ts"),
   tsx("bitvora-ai-trade-worker","scripts/ai-trade-worker.ts","512M"),
   tsx("bitvora-ai-settlement-worker","scripts/ai-settlement-worker.ts","512M"),
-  tsx("bitvora-outbox-worker","scripts/ai-outbox-worker.ts")
+  tsx("bitvora-outbox-worker","scripts/ai-outbox-worker.ts"),
+  tsx("bitvora-salary-scheduler","scripts/salary-scheduler.ts"),
+  tsx("bitvora-salary-worker","scripts/salary-worker.ts","512M")
 ]};

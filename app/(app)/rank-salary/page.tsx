@@ -1,2 +1,3 @@
 import { RankSalaryModule } from "@/components/rank-salary-module";
-export default function Page(){return <RankSalaryModule/>}
+import { SalaryStatusPanel } from "@/components/salary-status-panel";
+export default function Page(){return <><RankSalaryModule/><SalaryStatusPanel/></>}
