@@ -1,0 +1,4 @@
+import { Prisma } from "@prisma/client";
+export type FailureCode="INSUFFICIENT_BALANCE"|"SUBSCRIPTION_EXPIRED"|"DUPLICATE_EXECUTION"|"TRANSIENT_DATABASE"|"QUEUE_INFRASTRUCTURE"|"PERMANENT_VALIDATION";
+export class TradeJobError extends Error{constructor(public code:FailureCode,public transient:boolean,message:string=code){super(message)}}
+export function classify(error:unknown){if(error instanceof TradeJobError)return error;if(error instanceof Prisma.PrismaClientKnownRequestError&&["P2034","P2024","P1001","P1002"].includes(error.code))return new TradeJobError("TRANSIENT_DATABASE",true,error.message);if(error instanceof Error&&/ECONN|Redis|timeout/i.test(error.message))return new TradeJobError("QUEUE_INFRASTRUCTURE",true,error.message);return new TradeJobError("PERMANENT_VALIDATION",false,error instanceof Error?error.message:"Unknown failure")}

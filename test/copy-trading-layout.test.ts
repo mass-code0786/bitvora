@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8"),api=fs.readFileSync(path.join(process.cwd(),"app/api/ai-trading/route.ts"),"utf8");
+const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8"),api=fs.readFileSync(path.join(process.cwd(),"app/api/ai-trading/route.ts"),"utf8"),walletHistory=fs.readFileSync(path.join(process.cwd(),"components/wallet-history-module.tsx"),"utf8");
 
 describe("AI Copy Trading frontend layout",()=>{
   it("keeps the requested heading and wallet data while removing obsolete headings",()=>{
@@ -40,6 +40,18 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(api).toContain("tradeHistory=groupedTrades.filter(item=>!item.isCurrent)");
     expect(api).toContain("settledAt:item.settledAt");
     expect(copy).toContain("formatLocalDateTime(trade.settledAt)");
+  });
+
+  it("uses user-facing trade statuses without exposing principal accounting",()=>{
+    expect(copy).toContain('CAPITAL_LOCKED:"Active"');
+    expect(copy).toContain('PENDING_SETTLEMENT:"Active"');
+    expect(copy).toContain('SETTLING:"Processing"');
+    expect(copy).toContain('SETTLED:"Completed"');
+    expect(copy).not.toMatch(/capital locked|settlement pending|principal returned/i);
+    expect(copy).toContain("Profit received:");
+    expect(walletHistory).toContain('item.type!=="AI_TRADE_CAPITAL_LOCKED"');
+    expect(walletHistory).toContain('item.type!=="AI_TRADE_PRINCIPAL_RETURNED"');
+    expect(walletHistory).not.toContain("<b>{item.type}</b>");
   });
 
   it("uses a live dark one-minute candlestick widget without trading clutter",()=>{

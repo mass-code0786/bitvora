@@ -35,6 +35,37 @@ enum ReferralDistributionStatus {
   NO_PAYOUT
 }
 
+enum TradeSessionRunStatus {
+  QUEUING
+  RUNNING
+  SETTLING
+  COMPLETED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+enum AiTradeJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  DEAD
+}
+
+enum AiFinancialTradeStatus {
+  LOCKED
+  SETTLING
+  SETTLED
+  FAILED
+}
+
+enum AiOutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DEAD
+}
+
 model User {
   id                          String                       @id @default(cuid())
   uid                         String                       @unique @db.VarChar(8)
@@ -86,23 +117,23 @@ model User {
 }
 
 model NowPaymentsDeposit {
-  id                String   @id @default(cuid())
-  paymentId         String   @unique
-  userId            String
-  orderId           String   @unique
-  idempotencyKey    String
-  usdtAmount        Decimal  @db.Decimal(24, 8)
-  requestedAmount   Decimal  @db.Decimal(18, 2)
-  walletAddress     String
-  txHash             String?
-  status             String
-  providerStatus     String
-  credited           Boolean  @default(false)
-  expiresAt          DateTime?
-  confirmedAt        DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id              String    @id @default(cuid())
+  paymentId       String    @unique
+  userId          String
+  orderId         String    @unique
+  idempotencyKey  String
+  usdtAmount      Decimal   @db.Decimal(24, 8)
+  requestedAmount Decimal   @db.Decimal(18, 2)
+  walletAddress   String
+  txHash          String?
+  status          String
+  providerStatus  String
+  credited        Boolean   @default(false)
+  expiresAt       DateTime?
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
@@ -121,24 +152,24 @@ model UserPreference {
 }
 
 model SupportTicket {
-  id         String   @id @default(cuid())
-  userId     String
-  subject    String
-  category   String
-  message    String
-  status     String   @default("OPEN")
-  adminReply String?
-  priority   String   @default("NORMAL")
-  sessionId  String?
+  id                 String         @id @default(cuid())
+  userId             String
+  subject            String
+  category           String
+  message            String
+  status             String         @default("OPEN")
+  adminReply         String?
+  priority           String         @default("NORMAL")
+  sessionId          String?
   attachmentName     String?
   attachmentMimeType String?
   attachmentSize     Int?
   attachmentData     Bytes?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session    ChatSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  replies    SupportReply[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session            ChatSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  replies            SupportReply[]
 
   @@index([userId, createdAt])
   @@index([userId, updatedAt, id])
@@ -148,15 +179,15 @@ model SupportTicket {
 }
 
 model ChatSession {
-  id            String        @id @default(cuid())
+  id            String          @id @default(cuid())
   userId        String
-  title         String        @default("New conversation")
-  unreadCount   Int           @default(0)
-  lastMessageAt DateTime      @default(now())
+  title         String          @default("New conversation")
+  unreadCount   Int             @default(0)
+  lastMessageAt DateTime        @default(now())
   deletedAt     DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages      ChatMessage[]
   tickets       SupportTicket[]
 
@@ -166,16 +197,16 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   conversationId String
   role           String
   message        String
-  idempotencyKey String?     @unique
+  idempotencyKey String?      @unique
   matchedIntent  String?
   supportRuleId  String?
   matchScore     Float?
-  createdAt      DateTime    @default(now())
-  conversation   ChatSession @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  conversation   ChatSession  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   supportRule    SupportRule? @relation(fields: [supportRuleId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
@@ -227,19 +258,19 @@ model SupportAuditLog {
 }
 
 model SupportRule {
-  id             String   @id @default(cuid())
-  intentKey      String   @unique
-  category       String
-  title          String
-  response       String
-  keywordsJson   Json
-  examplesJson   Json
-  followUpsJson  Json
-  priority       Int      @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  messages       ChatMessage[]
+  id              String                  @id @default(cuid())
+  intentKey       String                  @unique
+  category        String
+  title           String
+  response        String
+  keywordsJson    Json
+  examplesJson    Json
+  followUpsJson   Json
+  priority        Int                     @default(0)
+  isActive        Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  messages        ChatMessage[]
   resolvedQueries SupportUnmatchedQuery[]
 
   @@index([isActive, priority, intentKey])
@@ -432,6 +463,143 @@ model AiBotTradeExecution {
   @@unique([userId, tradingDate, sessionId, tradeType])
   @@index([status, placedAt])
   @@index([userId, tradingDate])
+}
+
+model TradeSessionRun {
+  id                String                @id @default(cuid())
+  sessionId         String
+  localTradingDate  String                @db.VarChar(10)
+  tradeType         String                @default("AI_BOT")
+  timeZone          String
+  scheduledStartAt  DateTime
+  referencePriceAt  DateTime
+  scheduledSettleAt DateTime
+  officialSettledAt DateTime
+  pair              String
+  direction         String
+  profitRate        Decimal               @db.Decimal(12, 8)
+  resultSource      String
+  status            TradeSessionRunStatus @default(QUEUING)
+  totalEligible     Int                   @default(0)
+  totalQueued       Int                   @default(0)
+  totalStarted      Int                   @default(0)
+  totalFailed       Int                   @default(0)
+  totalSettled      Int                   @default(0)
+  queueCompletedAt  DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  trades            AiFinancialTrade[]
+  jobs              AiTradeJob[]
+
+  @@unique([localTradingDate, sessionId, tradeType])
+  @@index([sessionId, status])
+  @@index([status, scheduledSettleAt])
+}
+
+model AiFinancialWallet {
+  userId          String             @id
+  availableFuture Decimal            @db.Decimal(24, 8)
+  lockedFuture    Decimal            @default(0) @db.Decimal(24, 8)
+  completedProfit Decimal            @default(0) @db.Decimal(24, 8)
+  version         Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  trades          AiFinancialTrade[]
+  ledger          AiWalletLedger[]
+}
+
+model AiFinancialTrade {
+  id                  String                 @id @default(cuid())
+  executionKey        String                 @unique
+  sessionRunId        String
+  userId              String
+  subscriptionId      String
+  tradeType           String
+  balanceSnapshot     Decimal                @db.Decimal(24, 8)
+  tradePercentage     Decimal                @db.Decimal(12, 8)
+  principal           Decimal                @db.Decimal(24, 8)
+  profitRate          Decimal                @db.Decimal(12, 8)
+  profit              Decimal                @db.Decimal(24, 8)
+  status              AiFinancialTradeStatus @default(LOCKED)
+  officialStartedAt   DateTime
+  officialSettledAt   DateTime?
+  processingStartedAt DateTime               @default(now())
+  processingSettledAt DateTime?
+  failureCode         String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  sessionRun          TradeSessionRun        @relation(fields: [sessionRunId], references: [id], onDelete: Restrict)
+  wallet              AiFinancialWallet      @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  ledger              AiWalletLedger[]
+
+  @@unique([userId, sessionRunId, tradeType])
+  @@index([sessionRunId, status])
+  @@index([userId, sessionRunId])
+}
+
+model AiWalletLedger {
+  id              String            @id @default(cuid())
+  idempotencyKey  String            @unique
+  userId          String
+  tradeId         String
+  operation       String
+  amount          Decimal           @db.Decimal(24, 8)
+  availableBefore Decimal           @db.Decimal(24, 8)
+  availableAfter  Decimal           @db.Decimal(24, 8)
+  lockedBefore    Decimal           @db.Decimal(24, 8)
+  lockedAfter     Decimal           @db.Decimal(24, 8)
+  officialAt      DateTime
+  createdAt       DateTime          @default(now())
+  wallet          AiFinancialWallet @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  trade           AiFinancialTrade  @relation(fields: [tradeId], references: [id], onDelete: Restrict)
+
+  @@index([tradeId, operation])
+  @@index([userId, createdAt])
+}
+
+model AiTradeJob {
+  id             String           @id @default(cuid())
+  jobKey         String           @unique
+  queueName      String
+  bullJobId      String?          @unique
+  sessionRunId   String
+  userId         String?
+  tradeId        String?
+  kind           String
+  status         AiTradeJobStatus @default(QUEUED)
+  attempts       Int              @default(0)
+  failureCode    String?
+  failureMessage String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  sessionRun     TradeSessionRun  @relation(fields: [sessionRunId], references: [id], onDelete: Restrict)
+
+  @@index([sessionRunId, status])
+  @@index([queueName, status, createdAt])
+}
+
+model AiOutboxEvent {
+  id             String         @id @default(cuid())
+  idempotencyKey String         @unique
+  aggregateType  String
+  aggregateId    String
+  userId         String
+  eventType      String
+  payload        Json
+  status         AiOutboxStatus @default(PENDING)
+  attempts       Int            @default(0)
+  availableAt    DateTime       @default(now())
+  lockedAt       DateTime?
+  sentAt         DateTime?
+  lastError      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, availableAt, id])
+  @@index([aggregateId, eventType])
 }
 
 model AiBotSponsorIncome {
