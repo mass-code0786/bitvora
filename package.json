@@ -38,6 +38,7 @@
     "ai-trade:audit-legacy": "tsx scripts/ai-trade-migrate-legacy.ts --dry-run",
     "future-wallet:audit": "tsx scripts/future-wallet-reconcile.ts --audit",
     "future-wallet:reconcile": "tsx scripts/future-wallet-reconcile.ts",
+    "production-data-visibility:audit": "tsx scripts/production-data-visibility-audit.ts",
     "salary:scheduler": "tsx scripts/salary-scheduler.ts",
     "salary:worker": "tsx scripts/salary-worker.ts",
     "salary:audit": "tsx scripts/salary-audit.ts",

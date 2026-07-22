@@ -1,0 +1,19 @@
+import { prisma } from "@/lib/prisma";
+import { createDailySessions,migrateTradingStore } from "@/lib/ai-trading-engine";
+import { mergeVisibleTrades,type VisibleTrade } from "@/lib/trade-history-compat";
+
+const direction=(value:string):"BUY"|"SELL"=>value==="CALL"||value==="BUY"?"BUY":"SELL";
+
+export async function loadVisibleTradeHistory(userId:string,limit=500){
+  const[state,relational,executions,migrations]=await Promise.all([
+    prisma.userState.findUnique({where:{userId},select:{trading:true}}),
+    prisma.aiFinancialTrade.findMany({where:{userId},include:{sessionRun:true},orderBy:{officialStartedAt:"desc"},take:limit}),
+    prisma.aiBotTradeExecution.findMany({where:{userId},orderBy:{placedAt:"desc"},take:limit}),
+    prisma.aiLegacyTradeMigration.findMany({where:{userId,status:"MIGRATED"},select:{sourceId:true,details:true}})
+  ]);
+  const relationalVisible:VisibleTrade[]=relational.map(trade=>({id:trade.id,source:"RELATIONAL",sourceId:trade.id,executionKey:trade.executionKey,sessionId:trade.sessionRun.sessionId,pair:trade.sessionRun.pair,direction:direction(trade.sessionRun.direction),placementSource:trade.placementSource==="MANUAL"?"MANUAL":"AI_BOT",status:trade.status==="SETTLED"?"SETTLED":trade.status==="FAILED"?"FAILED":"CAPITAL_LOCKED",profitReceived:trade.status==="SETTLED"?Number(trade.profit):null,placedAt:trade.officialStartedAt.getTime(),settledAt:trade.officialSettledAt?.getTime()??null,principal:Number(trade.principal),balanceSnapshot:Number(trade.balanceSnapshot),profitRate:Number(trade.profitRate)}));
+  const legacyStore=migrateTradingStore(state?.trading),executionByTradeId=new Map(executions.map(item=>[item.tradeId,item])),legacyVisible:VisibleTrade[]=legacyStore.trades.map(trade=>{const execution=executionByTradeId.get(trade.id),zone=trade.sessionTimeZone??execution?.timeZone??"Asia/Kolkata",session=createDailySessions(new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(trade.placedAt)),trade.placedAt,zone).find(item=>item.id===trade.sessionId);return{id:`legacy:${trade.id}`,source:"LEGACY_COMPATIBILITY",sourceId:execution?.id??trade.id,executionKey:execution?.executionKey??trade.idempotencyKey,sessionId:trade.sessionId,pair:session?.pair??"AI/USDT",direction:direction(trade.direction),placementSource:trade.placementSource??"MANUAL",status:trade.status==="SETTLED"?"SETTLED":trade.status==="MISSED"?"MISSED":"CAPITAL_LOCKED",profitReceived:trade.status==="SETTLED"?trade.profitAmount:null,placedAt:trade.placedAt,settledAt:trade.settledAt,principal:trade.tradeCapital,balanceSnapshot:trade.balanceSnapshot,profitRate:trade.profitRate}});
+  const representedExecutionIds=new Set(legacyVisible.map(item=>item.sourceId)),executionOnly:VisibleTrade[]=executions.filter(item=>!representedExecutionIds.has(item.id)).map(item=>{const session=createDailySessions(item.tradingDate,item.placedAt.getTime(),item.timeZone).find(value=>value.id===item.sessionId);return{id:`legacy-execution:${item.id}`,source:"LEGACY_COMPATIBILITY",sourceId:item.id,executionKey:item.executionKey,sessionId:item.sessionId,pair:session?.pair??"AI/USDT",direction:direction(session?.signalDirection??"CALL"),placementSource:"AI_BOT",status:item.status==="SETTLED"?"SETTLED":item.status==="FAILED"?"FAILED":"CAPITAL_LOCKED",profitReceived:null,placedAt:item.placedAt.getTime(),settledAt:item.settledAt?.getTime()??null,principal:0,balanceSnapshot:0,profitRate:0}});
+  const migrated=new Set(migrations.flatMap(item=>{const detail=item.details&&typeof item.details==="object"&&!Array.isArray(item.details)?item.details as Record<string,unknown>:null;return[item.sourceId,typeof detail?.legacyTradeId==="string"?detail.legacyTradeId:""]}).filter(Boolean));
+  return mergeVisibleTrades(relationalVisible,[...legacyVisible,...executionOnly],migrated).slice(0,limit);
+}

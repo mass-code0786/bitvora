@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8"),api=fs.readFileSync(path.join(process.cwd(),"app/api/ai-trading/route.ts"),"utf8"),walletHistory=fs.readFileSync(path.join(process.cwd(),"components/wallet-history-module.tsx"),"utf8");
+const copy=fs.readFileSync(path.join(process.cwd(),"components/copy-trading-module.tsx"),"utf8"),chart=fs.readFileSync(path.join(process.cwd(),"components/tradingview-compact-chart.tsx"),"utf8"),api=fs.readFileSync(path.join(process.cwd(),"app/api/ai-trading/route.ts"),"utf8"),compat=fs.readFileSync(path.join(process.cwd(),"lib/trade-history-compat.server.ts"),"utf8"),walletHistory=fs.readFileSync(path.join(process.cwd(),"components/wallet-history-module.tsx"),"utf8");
 
 describe("AI Copy Trading frontend layout",()=>{
   it("keeps the requested heading and wallet data while removing obsolete headings",()=>{
@@ -38,7 +38,8 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(copy).toContain("No trade history.");
     expect(api).toContain("currentTrades=groupedTrades.filter(item=>item.isCurrent)");
     expect(api).toContain("tradeHistory=groupedTrades.filter(item=>!item.isCurrent)");
-    expect(api).toContain("settledAt:trade.officialSettledAt");
+    expect(api).toContain("loadVisibleTradeHistory");
+    expect(compat).toContain("settledAt:trade.officialSettledAt");
     expect(copy).toContain("formatLocalDateTime(trade.settledAt)");
   });
 
