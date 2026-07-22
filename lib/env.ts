@@ -4,7 +4,7 @@ import { z } from "zod";
 const serverEnvironmentSchema = z.object({
   DATABASE_URL: z.string().url(),
   AUTH_SECRET: z.string().min(32),
-  NEXTAUTH_URL: z.string().url(),
+  AUTH_URL: z.string().url(),
   INTERNAL_JOB_SECRET: z.string().min(32),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email(),
   NOWPAYMENTS_API_KEY: z.string().min(1),

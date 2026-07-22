@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { access } from "node:fs/promises";
+if(!process.env.NEXTAUTH_URL&&process.env.AUTH_URL)process.env.NEXTAUTH_URL=process.env.AUTH_URL;
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 const prisma=new PrismaClient();type Level="PASS"|"WARN"|"FAIL";const results:Array<{level:Level;name:string;detail:string}>=[],add=(level:Level,name:string,detail:string)=>results.push({level,name,detail});let dbOkay=false;const tables=["ChatSession","ChatMessage","SupportTicket","SupportReply","SupportAuditLog","SupportChatRestriction","SupportRule","SupportUnmatchedQuery"],indexes=["ChatSession_userId_deletedAt_lastMessageAt_id_idx","ChatMessage_conversationId_createdAt_id_idx","ChatMessage_supportRuleId_createdAt_idx","SupportTicket_userId_updatedAt_id_idx","SupportRule_isActive_priority_intentKey_idx","SupportUnmatchedQuery_status_createdAt_id_idx"],foreignKeys=["ChatSession_userId_fkey","ChatMessage_conversationId_fkey","ChatMessage_supportRuleId_fkey","SupportReply_ticketId_fkey","SupportUnmatchedQuery_userId_fkey"];
