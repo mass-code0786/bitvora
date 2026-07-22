@@ -23,7 +23,8 @@
     "support:seed-rules": "tsx scripts/seed-support-rules.ts",
     "ai-bot:worker": "tsx scripts/ai-bot-auto-trade-worker.ts",
     "ai-bot:audit": "tsx scripts/audit-ai-bot-trades.ts",
-    "ai-bot:repair-missed": "tsx scripts/audit-ai-bot-trades.ts --repair-recent-missed"
+    "ai-bot:repair-missed": "tsx scripts/audit-ai-bot-trades.ts --repair-recent-missed",
+    "diagnose:navigation": "node scripts/diagnose-client-navigation.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -53,6 +54,7 @@
     "dotenv-cli": "^8.0.0",
     "eslint": "^9.17.0",
     "eslint-config-next": "15.5.20",
+    "playwright-core": "^1.61.1",
     "prisma": "^6.19.1",
     "tsx": "^4.20.6",
     "vitest": "^3.2.4"
