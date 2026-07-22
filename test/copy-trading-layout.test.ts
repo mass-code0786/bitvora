@@ -53,7 +53,7 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(chart).not.toContain("Buy");
     expect(chart).not.toContain("Sell");
     expect(chart).toContain("host.replaceChildren()");
-    expect(chart).toContain("},[interval,studies])");
+    expect(chart).toContain("},[attempt,interval,studies])");
   });
 
   it("shows compact timeframe and TradingView study controls with 1m selected by default",()=>{

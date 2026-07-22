@@ -61,6 +61,7 @@ model User {
   fundTransactions            AdminFundTransaction[]
   notifications               UserNotification[]
   aiBotSubscriptions          AiBotSubscription[]
+  aiBotTradeExecutions        AiBotTradeExecution[]
   aiBotSponsorIncomeReceived  AiBotSponsorIncome[]         @relation("AiBotIncomeSponsor")
   aiBotSponsorIncomeGenerated AiBotSponsorIncome[]         @relation("AiBotIncomeBuyer")
   aiBotSponsorIncomeAuditLogs AiBotSponsorIncomeAuditLog[] @relation("AiBotIncomeAuditSponsor")
@@ -404,9 +405,33 @@ model AiBotSubscription {
   updatedAt             DateTime                @updatedAt
   user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   sponsorIncome         AiBotSponsorIncome?
+  tradeExecutions       AiBotTradeExecution[]
 
   @@index([userId, activatedAt])
   @@index([userId, expiresAt])
+}
+
+model AiBotTradeExecution {
+  id             String            @id @default(cuid())
+  executionKey   String            @unique
+  userId         String
+  subscriptionId String
+  tradingDate    String
+  sessionId      String
+  timeZone       String
+  tradeType      String
+  tradeId        String            @unique
+  status         String            @default("PLACED")
+  placedAt       DateTime
+  settledAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   AiBotSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, tradingDate, sessionId, tradeType])
+  @@index([status, placedAt])
+  @@index([userId, tradingDate])
 }
 
 model AiBotSponsorIncome {
