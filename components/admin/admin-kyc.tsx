@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { appendAudit } from "@/lib/admin/admin-audit";
 import type { KycDocumentType, KycHistoryEntry, KycStatus } from "@/lib/kyc/kyc-types";
+import { formatLocalDateTime } from "@/lib/date-time";
 
 type KycRow = { userUid:string; name:string; email:string; country:string; documentType:KycDocumentType|null; maskedDocumentNumber:string|null; status:KycStatus; submittedAt:number|null; submissionVersion:number; reviewedAt:number|null; reviewedBy:string|null };
 type KycDetail = KycRow & { fullName:string; dateOfBirth:string; residentialAddress:string; documentNumber:string; hasBack:boolean; rejectionReason:string|null; history:KycHistoryEntry[] };
-const fmt=(value:number|null)=>value?new Date(value).toLocaleString():"—";
+const fmt=(value:number|null)=>formatLocalDateTime(value);
 
 export function AdminKycList(){
   const [rows,setRows]=useState<KycRow[]>([]),[query,setQuery]=useState(""),[status,setStatus]=useState("ALL"),[country,setCountry]=useState("ALL"),[documentType,setDocumentType]=useState("ALL");

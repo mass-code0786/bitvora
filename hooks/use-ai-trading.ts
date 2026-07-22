@@ -4,7 +4,7 @@ import type { TradeSession } from "@/lib/ai-trading-engine";
 
 export type CurrentAiSession={id:string;scheduledAt:number;liveStartsAt:number;liveEndsAt:number;startTime:number;displayStartTime:string;displayLiveWindow:string;countdownTarget:number;pair:string;signal:"BUY"|"SELL";eligible:boolean;status:"UPCOMING"|"LIVE"|"MISSED"|"JOINED"|"COMPLETED";blockReason:string|null;placementSource:"MANUAL"|"AI_BOT"|null};
 export type FutureWalletSummary={balance:number;todayNetChange:number};
-export type AiTradeListItem={id:string;pair:string;direction:"BUY"|"SELL";placementSource:"MANUAL"|"AI_BOT";sourceLabel:"Manual"|"AI Bot";status:"CAPITAL_LOCKED"|"PENDING_SETTLEMENT"|"SETTLED"|"MISSED";tradeCapital:number;principalReturned:number|null;profitReceived:number|null;displayPlacedTime:string|null;displaySettledTime:string|null;displayMissedTime:string|null};
+export type AiTradeListItem={id:string;pair:string;direction:"BUY"|"SELL";placementSource:"MANUAL"|"AI_BOT";sourceLabel:"Manual"|"AI Bot";status:"CAPITAL_LOCKED"|"PENDING_SETTLEMENT"|"SETTLED"|"MISSED";tradeCapital:number;principalReturned:number|null;profitReceived:number|null;placedAt:number;settledAt:number|null;missedAt:number|null};
 
 export function useAiTrading(_userId:string,_userUid:string,_futureBalance:number){
   const[sessions,setSessions]=useState<TradeSession[]>([]),[currentSession,setCurrentSession]=useState<CurrentAiSession|null>(null),[currentTrades,setCurrentTrades]=useState<AiTradeListItem[]>([]),[tradeHistory,setTradeHistory]=useState<AiTradeListItem[]>([]),[futureWalletSummary,setFutureWalletSummary]=useState<FutureWalletSummary|null>(null),[offset,setOffset]=useState(0),[tick,setTick]=useState(()=>Date.now()),[ready,setReady]=useState(false),now=tick+offset;

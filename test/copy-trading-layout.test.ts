@@ -33,7 +33,8 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(copy).toContain("No trade history.");
     expect(api).toContain("currentTrades=groupedTrades.filter(item=>item.isCurrent)");
     expect(api).toContain("tradeHistory=groupedTrades.filter(item=>!item.isCurrent)");
-    expect(api).toContain("displaySettledTime");
+    expect(api).toContain("settledAt:item.settledAt");
+    expect(copy).toContain("formatLocalDateTime(trade.settledAt)");
   });
 
   it("uses a live dark one-minute candlestick widget without trading clutter",()=>{

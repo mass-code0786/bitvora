@@ -44,6 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = user.id;
       session.user.uid = user.uid;
       session.user.role = user.role;
+      session.user.country = user.country;
       return session;
     },
   },

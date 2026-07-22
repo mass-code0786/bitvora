@@ -9,7 +9,7 @@ const serverEnvironmentSchema = z.object({
   ADMIN_BOOTSTRAP_EMAIL: z.string().email(),
   NOWPAYMENTS_API_KEY: z.string().min(1),
   NOWPAYMENTS_IPN_SECRET: z.string().min(32),
-  NOWPAYMENTS_API_BASE_URL: z.string().url().default("https://api.nowpayments.io/v1"),
+  NOWPAYMENTS_API_URL: z.string().url().default("https://api.nowpayments.io/v1"),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   KYC_STORAGE_PROVIDER: z.enum(["S3", "R2", "S3_COMPATIBLE"]),
   KYC_STORAGE_BUCKET: z.string().min(1),

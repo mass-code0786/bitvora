@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export class NowPaymentsError extends Error{constructor(public code:string,message="NOWPayments request failed",public status=502){super(message)}}
-const baseUrl=()=>process.env.NOWPAYMENTS_API_BASE_URL?.replace(/\/$/,"")||"https://api.nowpayments.io/v1";
+const baseUrl=()=>(process.env.NOWPAYMENTS_API_URL??process.env.NOWPAYMENTS_API_BASE_URL)?.replace(/\/$/,"")||"https://api.nowpayments.io/v1";
 const apiKey=()=>{const value=process.env.NOWPAYMENTS_API_KEY;if(!value)throw new NowPaymentsError("NOT_CONFIGURED","Deposit provider is not configured.",503);return value};
 async function request<T>(path:string,init:RequestInit={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10_000);try{const response=await fetch(`${baseUrl()}${path}`,{...init,signal:controller.signal,headers:{"x-api-key":apiKey(),"content-type":"application/json",...init.headers}});if(!response.ok)throw new NowPaymentsError("PROVIDER_ERROR",`Deposit provider request failed (${response.status}).`,502);return await response.json() as T}catch(error){if(error instanceof NowPaymentsError)throw error;if(error instanceof Error&&error.name==="AbortError")throw new NowPaymentsError("TIMEOUT","Deposit provider timed out.",504);throw new NowPaymentsError("UNAVAILABLE","Deposit provider is unavailable.",502)}finally{clearTimeout(timer)}}
 export const getApiStatus=()=>request<{message:string}>("/status");

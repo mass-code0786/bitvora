@@ -3,13 +3,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CheckCircle2, FileCheck2, ShieldAlert } from "lucide-react";
 import { PageHeader } from "./ui";
+import { formatLocalDateTime } from "@/lib/date-time";
 
 type SafeKyc={status:"NOT_SUBMITTED"|"PENDING"|"APPROVED"|"REJECTED";submissionVersion:number;maskedDocumentNumber?:string;documentType?:string;reviewedAt?:number|null;reviewedLocalDateTime?:string|null;rejectionReason?:string|null;notifications:{id:string;title:string;message:string;createdAt:number;localDate:string;localDateTime:string}[]};
 const copy={NOT_SUBMITTED:"Verification not submitted",PENDING:"Your documents are under review.",APPROVED:"Your KYC verification is approved.",REJECTED:"Your KYC was rejected. Correct the information and resubmit."};
 
 export function KycModule(){
   const[kyc,setKyc]=useState<SafeKyc|null>(null),[error,setError]=useState(""),[sending,setSending]=useState(false);
-  const load=()=>fetch("/api/kyc/me",{cache:"no-store"}).then(r=>r.json()).then(setKyc);
+  const load=()=>fetch("/api/kyc/me",{cache:"no-store"}).then(r=>r.json()).then((value:SafeKyc)=>setKyc({...value,reviewedLocalDateTime:formatLocalDateTime(value.reviewedAt),notifications:value.notifications.map(item=>({...item,localDateTime:formatLocalDateTime(item.createdAt)}))}));
   useEffect(()=>{void load()},[]);
   const submit=async(event:React.FormEvent<HTMLFormElement>)=>{event.preventDefault();setSending(true);setError("");const response=await fetch("/api/kyc/submit",{method:"POST",body:new FormData(event.currentTarget)}),value=await response.json();if(!response.ok)setError(value.error??"KYC submission failed.");else await load();setSending(false)};
   if(!kyc)return <p>Loading KYC status…</p>;

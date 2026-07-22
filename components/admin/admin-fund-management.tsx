@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { formatLocalDateTime } from "@/lib/date-time";
 
 type FundUser={id:string;uid:string;name:string;email:string;spotBalance:number};
 type FundTransaction={id:string;userUid:string;userName:string;action:"CREDIT"|"DEDUCT";amount:number;reason:string;adminUid:string;previousBalance:number;newBalance:number;createdAt:number;status:string};
 
 const currency=(value:number)=>`$${value.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-const timestamp=(value:number)=>new Date(value).toLocaleString();
+const timestamp=(value:number)=>formatLocalDateTime(value);
 
 export function AdminFundManagement(){
   const [uid,setUid]=useState("");
