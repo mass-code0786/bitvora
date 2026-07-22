@@ -8,12 +8,13 @@ import { resolveUserTimeZone } from "@/lib/timezone.server";
 export const AI_BOT_WORKER_INTERVAL_MS=5_000;
 export const AI_BOT_MISSED_GRACE_MS=60_000;
 export const botExecutionKey=(userId:string,tradingDate:string,sessionId:string)=>`${userId}:${tradingDate}:${sessionId}:AI_BOT`;
-export type BotExecutionResult={joined:boolean;reason:"PLACED"|"ALREADY_JOINED"|"BOT_INACTIVE"|"SESSION_NOT_FOUND"|"SESSION_NOT_LIVE"|"NOT_ELIGIBLE"|"INSUFFICIENT_BALANCE"|"ACCOUNT_STATE_UNAVAILABLE";tradeId?:string;executionKey?:string};
+export type BotExecutionResult={joined:boolean;reason:"PLACED"|"ALREADY_JOINED"|"BOT_INACTIVE"|"SESSION_NOT_FOUND"|"SESSION_NOT_LIVE"|"NOT_ELIGIBLE"|"INSUFFICIENT_BALANCE"|"ACCOUNT_STATE_UNAVAILABLE"|"LEGACY_DISABLED";tradeId?:string;executionKey?:string};
 
 class BotSkip extends Error{constructor(public reason:BotExecutionResult["reason"]){super(reason)}}
 const uniqueConflict=(error:unknown)=>error instanceof Prisma.PrismaClientKnownRequestError&&error.code==="P2002";
 
 export async function executeAiBotSession(userId:string,sessionId:string,now=Date.now()):Promise<BotExecutionResult>{
+  if(process.env.LEGACY_AI_TRADE_ALLOW_NEW!=="YES")return{joined:false,reason:"LEGACY_DISABLED"};
   try{return await prisma.$transaction(async tx=>{
     await tx.$queryRaw`SELECT "id" FROM "UserState" WHERE "userId"=${userId} FOR UPDATE`;
     const user=await tx.user.findUnique({where:{id:userId},select:{id:true,uid:true,timezone:true,country:true,state:{select:{wallet:true,trading:true}}}});if(!user?.state)throw new BotSkip("ACCOUNT_STATE_UNAVAILABLE");

@@ -38,7 +38,7 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(copy).toContain("No trade history.");
     expect(api).toContain("currentTrades=groupedTrades.filter(item=>item.isCurrent)");
     expect(api).toContain("tradeHistory=groupedTrades.filter(item=>!item.isCurrent)");
-    expect(api).toContain("settledAt:item.settledAt");
+    expect(api).toContain("settledAt:trade.officialSettledAt");
     expect(copy).toContain("formatLocalDateTime(trade.settledAt)");
   });
 

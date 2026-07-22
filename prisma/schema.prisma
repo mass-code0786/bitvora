@@ -136,6 +136,9 @@ model User {
   nowPaymentsDeposits         NowPaymentsDeposit[]
   salaryPayments              SalaryPayment[]
   salaryLedger                SalaryLedger[]
+  additionalTradeEligibility AiAdditionalTradeEligibility?
+  legacyTradeMigrations      AiLegacyTradeMigration[]
+  financialWallet            AiFinancialWallet?
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -495,6 +498,8 @@ model TradeSessionRun {
   sessionId         String
   localTradingDate  String                @db.VarChar(10)
   tradeType         String                @default("AI_BOT")
+  sessionType       String                @default("REGULAR")
+  localSessionSlot  String                @default("12:00")
   timeZone          String
   scheduledStartAt  DateTime
   referencePriceAt  DateTime
@@ -527,11 +532,14 @@ model AiFinancialWallet {
   availableFuture Decimal            @db.Decimal(24, 8)
   lockedFuture    Decimal            @default(0) @db.Decimal(24, 8)
   completedProfit Decimal            @default(0) @db.Decimal(24, 8)
+  openingBalance  Decimal            @default(0) @db.Decimal(24, 8)
+  retainedPrincipal Decimal          @default(0) @db.Decimal(24, 8)
   version         Int                @default(0)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   trades          AiFinancialTrade[]
   ledger          AiWalletLedger[]
+  user            User               @relation(fields: [userId], references: [id], onDelete: Restrict)
 }
 
 model AiFinancialTrade {
@@ -539,8 +547,12 @@ model AiFinancialTrade {
   executionKey        String                 @unique
   sessionRunId        String
   userId              String
-  subscriptionId      String
+  subscriptionId      String?
   tradeType           String
+  placementSource     String                 @default("AI_BOT")
+  userTimeZone        String                 @default("UTC")
+  localTradingDate    String                 @default("") @db.VarChar(10)
+  localSessionSlot    String                 @default("")
   balanceSnapshot     Decimal                @db.Decimal(24, 8)
   tradePercentage     Decimal                @db.Decimal(12, 8)
   principal           Decimal                @db.Decimal(24, 8)
@@ -567,7 +579,7 @@ model AiWalletLedger {
   id              String            @id @default(cuid())
   idempotencyKey  String            @unique
   userId          String
-  tradeId         String
+  tradeId         String?
   operation       String
   amount          Decimal           @db.Decimal(24, 8)
   availableBefore Decimal           @db.Decimal(24, 8)
@@ -577,10 +589,42 @@ model AiWalletLedger {
   officialAt      DateTime
   createdAt       DateTime          @default(now())
   wallet          AiFinancialWallet @relation(fields: [userId], references: [userId], onDelete: Restrict)
-  trade           AiFinancialTrade  @relation(fields: [tradeId], references: [id], onDelete: Restrict)
+  trade           AiFinancialTrade? @relation(fields: [tradeId], references: [id], onDelete: Restrict)
 
   @@index([tradeId, operation])
   @@index([userId, createdAt])
+}
+
+model AiAdditionalTradeEligibility {
+  userId                  String   @id
+  sourceTransferId        String   @unique
+  firstTransferAmount     Decimal  @db.Decimal(24, 8)
+  eligibilityStartedAt    DateTime
+  eligibilityEndsAt       DateTime?
+  eligible                Boolean
+  consumedRuleVersion     String   @default("FIRST_SPOT_TO_FUTURE_V1")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([eligible, eligibilityStartedAt, eligibilityEndsAt])
+}
+
+model AiLegacyTradeMigration {
+  id               String   @id @default(cuid())
+  sourceType       String
+  sourceId         String
+  userId           String
+  authoritativeTradeId String?
+  classification   String
+  status           String
+  details          Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId])
+  @@index([userId, status])
 }
 
 model AiTradeJob {

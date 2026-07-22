@@ -1,0 +1,5 @@
+import "dotenv/config";
+import { prisma } from "@/lib/prisma";
+import { closeAiTradeQueues,getRedisConnection } from "@/lib/ai-trade-scale/queue";
+async function main(){if(process.env.AI_TRADE_LOAD_TEST_CONFIRM!=="YES")throw new Error("Refusing load test. Set AI_TRADE_LOAD_TEST_CONFIRM=YES.");if(!/test|staging|benchmark/i.test(process.env.DATABASE_URL??""))throw new Error("DATABASE_URL must identify a test, staging, or benchmark database.");const started=Date.now(),[eligible,redis]=await Promise.all([prisma.user.count({where:{aiBotSubscriptions:{some:{status:"ACTIVE"}}}}),getRedisConnection().ping()]);if(eligible<20_000)throw new Error(`Benchmark requires at least 20,000 eligible users; found ${eligible}.`);console.log(JSON.stringify({productionLike:true,eligibleUsers:eligible,redis,preflightMs:Date.now()-started,metrics:"Run orchestrator/workers externally, then use ai-trade audit for throughput, recovery, SLA, and ledger reconciliation."},null,2))}
+void main().finally(async()=>{await closeAiTradeQueues();await prisma.$disconnect()});

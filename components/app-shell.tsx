@@ -8,7 +8,6 @@ import { Bell, ChartNoAxesCombined, ChevronRight, CircleUserRound, FileCheck2, H
 import { Logo } from "./brand";
 import { SessionGuard } from "./session-guard";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { AiBotRunner } from "./ai-bot-runner";
 import { formatLocalDateTime, setDateTimeFallbackCountry } from "@/lib/date-time";
 import { NavigationRecovery } from "./navigation-recovery";
 
@@ -30,7 +29,7 @@ export function AppShell({children}:{children:ReactNode}) {
   const changePassword=async(event:React.FormEvent)=>{event.preventDefault();setPasswordMessage("");if(newPassword.length<8||newPassword.trim().length<8){setPasswordMessage("New password must be at least 8 characters.");return}if(newPassword!==confirmPassword){setPasswordMessage("Confirm password must match the new password.");return}setPasswordBusy(true);try{const response=await fetch("/api/account/change-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({currentPassword,newPassword})}),data=await response.json();if(!response.ok)throw new Error(data.error??"Unable to update password.");setPasswordMessage(data.message??"Password updated successfully.");setCurrentPassword("");setNewPassword("");setConfirmPassword("")}catch(error){setPasswordMessage(error instanceof Error?error.message:"Unable to update password.")}finally{setPasswordBusy(false)}};
   const logout=async()=>{localStorage.clear();sessionStorage.clear();await signOut({callbackUrl:"/login"})};
   const actions=<div className="flex items-center gap-2"><motion.button whileTap={{scale:.9}} onClick={()=>void openNotifications()} aria-label="Notifications" className="icon-button"><Bell size={17}/></motion.button><motion.button whileTap={{scale:.9}} onClick={openMenu} aria-label="Open menu" className="icon-button"><Menu size={18}/></motion.button></div>;
-  return <div className="app-bg min-h-screen text-slate-300"><SessionGuard/><NavigationRecovery/><AiBotRunner/><div className="noise-layer"/><div className="ambient ambient-one"/><div className="ambient ambient-two"/><div className="ambient ambient-three"/>
+  return <div className="app-bg min-h-screen text-slate-300"><SessionGuard/><NavigationRecovery/><div className="noise-layer"/><div className="ambient ambient-one"/><div className="ambient ambient-two"/><div className="ambient ambient-three"/>
     <header className="premium-header sticky top-0 z-40"><div className={`mx-auto max-w-6xl px-4 sm:px-6 ${dashboard?"":"flex h-16 items-center justify-between"}`}>
       {dashboard?<><div className="target-header-top"><Logo onClick={openProfile}/>{actions}</div><div className="target-header-user"><div className="target-header-avatar">{initials}</div><div><small>Hello,</small><div className="target-header-name-line"><strong>{user?.name||"User"}</strong><span className="target-rank-stars" aria-label={`Rank ${currentRank} of 7`}>{Array.from({length:7},(_,index)=><i className={index<currentRank?"achieved":"locked"} key={index}>{index<currentRank?"★":"☆"}</i>)}</span></div><span>ID · {user?.uid||"—"}</span></div></div></>:<><Logo/><div className="flex items-center gap-2">{actions}</div></>}
     </div></header>

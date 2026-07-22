@@ -34,9 +34,9 @@ export async function distributeFirstSpotToFuture(tx:Prisma.TransactionClient,in
   const completedPayouts=new Set(existing?.entries.map(entryKey)??[]),outcomes:DistributionOutcome[]=[];
   for(const payout of plan){
     const payoutKey=`${payout.incomeType}:${payout.level}`,base={level:payout.level,recipientUserId:payout.recipient.id,recipientUid:payout.recipient.uid,incomeType:payout.incomeType,amount:payout.amount};
-    const state=await tx.userState.findUnique({where:{userId:payout.recipient.id}}),wallet=migrateWalletStore(state?.wallet??cloneWalletSeed());
-    const requiresQualification=payout.incomeType==="LEVEL_INCOME"&&payout.level>=2,qualified=!requiresQualification||wallet.totalFuturePrincipal>=50;
-    const qualification={qualified,qualifyingFuturePrincipal:requiresQualification?wallet.totalFuturePrincipal:null,reason:qualified?null:"FUTURE_PRINCIPAL_BELOW_50"};
+    const state=await tx.userState.findUnique({where:{userId:payout.recipient.id}}),wallet=migrateWalletStore(state?.wallet??cloneWalletSeed()),financial=tx.aiFinancialWallet?await tx.aiFinancialWallet.findUnique({where:{userId:payout.recipient.id},select:{retainedPrincipal:true}}):null,retainedPrincipal=financial?Number(financial.retainedPrincipal.toString()):wallet.totalFuturePrincipal;
+    const requiresQualification=payout.incomeType==="LEVEL_INCOME"&&payout.level>=2,qualified=!requiresQualification||retainedPrincipal>=50;
+    const qualification={qualified,qualifyingFuturePrincipal:requiresQualification?retainedPrincipal:null,reason:qualified?null:"FUTURE_PRINCIPAL_BELOW_50"};
     if(completedPayouts.has(payoutKey)){const code=payout.incomeType==="LEVEL_INCOME"?referralLogCodes.levelAlreadyPaid:referralLogCodes.referralAlreadyPaid;outcomes.push({...base,code,qualification,existingPayout:true,newlyCreated:false});safeLog(code,{...base,...qualification});continue}
     if(!qualified){outcomes.push({...base,code:referralLogCodes.recipientNotQualified,qualification,existingPayout:false,newlyCreated:false});safeLog(referralLogCodes.recipientNotQualified,{...base,...qualification});continue}
     const ledgerId=`${sourceTransferId}:${payout.incomeType}:level-${payout.level}`,before=wallet.wallets.spot.balance,after=addMoney(before,payout.amount),direct=payout.incomeType==="REFERRAL_INCOME";
