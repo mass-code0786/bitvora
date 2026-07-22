@@ -19,13 +19,15 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(copy.match(/<TradingViewCompactChart\/>/g)).toHaveLength(1);
   });
 
-  it("shows the localized schedule and countdown while keeping trade authorization server-driven",()=>{
+  it("removes the schedule card and keeps only the session name, countdown, and authorized Trade button",()=>{
     expect(copy).not.toContain("No eligible session");
     expect(copy).not.toContain("The next eligible session will appear automatically.");
     expect(copy).toContain('session.status==="LIVE"&&session.eligible');
-    expect(copy).toContain("Today&apos;s sessions · Your local time");
-    expect(copy).toContain("trading.bonus.availableToday");
+    expect(copy).not.toContain("Today&apos;s sessions");
+    expect(copy).not.toContain("SessionSchedule");
     expect(copy).toContain("countdownTarget-now");
+    expect(copy).not.toMatch(/session\.displayStartTime[\s\S]{0,80}session\.status/);
+    expect(copy).toMatch(/<span>\{session\?\.type[\s\S]*<small>\{countdown\}<\/small>/);
     expect(copy).toMatch(/<button disabled={!canTrade} onClick={onTrade}>Trade<\/button>/);
   });
 
