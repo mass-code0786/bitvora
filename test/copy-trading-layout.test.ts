@@ -19,11 +19,14 @@ describe("AI Copy Trading frontend layout",()=>{
     expect(copy.match(/<TradingViewCompactChart\/>/g)).toHaveLength(1);
   });
 
-  it("keeps the compact card empty except for its label and backend-authorized Trade button",()=>{
+  it("shows the localized schedule and countdown while keeping trade authorization server-driven",()=>{
     expect(copy).not.toContain("No eligible session");
     expect(copy).not.toContain("The next eligible session will appear automatically.");
     expect(copy).toContain('session.status==="LIVE"&&session.eligible');
-    expect(copy).toMatch(/<span>Copy Trading<\/span>[\s\S]*<button disabled={!canTrade} onClick={onTrade}>Trade<\/button>/);
+    expect(copy).toContain("Today&apos;s sessions · Your local time");
+    expect(copy).toContain("trading.bonus.availableToday");
+    expect(copy).toContain("countdownTarget-now");
+    expect(copy).toMatch(/<button disabled={!canTrade} onClick={onTrade}>Trade<\/button>/);
   });
 
   it("renders server-grouped current and historical trades without overlap",()=>{

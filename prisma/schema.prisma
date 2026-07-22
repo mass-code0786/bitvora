@@ -356,6 +356,7 @@ model AiTradeIntent {
 
 model Banner {
   id               String           @id @default(cuid())
+  uploadKey        String?          @unique
   title            String
   imageUrl         String
   imagePath        String

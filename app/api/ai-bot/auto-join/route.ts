@@ -4,12 +4,13 @@ import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { createEmptyTradingStore, getSessionById, migrateTradingStore, placeUserTrade, type AiTradingStore } from "@/lib/ai-trading-engine";
 import { cloneWalletSeed, lockFutureTradeCapital, migrateWalletStore, type WalletStore } from "@/lib/wallet-data";
 import { prisma } from "@/lib/prisma";
+import { resolveUserTimeZone } from "@/lib/timezone.server";
 
 const input=z.object({sessionId:z.string().min(8).max(160)});
 
 export async function POST(request:Request){
   try{
-    const user=await requireAuthenticatedUser(),value=input.parse(await request.json()),now=Date.now(),session=getSessionById(value.sessionId,now);
+    const user=await requireAuthenticatedUser(),value=input.parse(await request.json()),now=Date.now(),profile=await prisma.user.findUnique({where:{id:user.id},select:{timezone:true,country:true}}),session=getSessionById(value.sessionId,now,resolveUserTimeZone(profile?.timezone,profile?.country));
     if(!session)return NextResponse.json({joined:false,reason:"SESSION_NOT_FOUND"},{status:404});
     const result=await prisma.$transaction(async transaction=>{
       const subscription=await transaction.aiBotSubscription.findFirst({where:{userId:user.id,status:"ACTIVE",activatedAt:{lte:new Date(session.liveFrom)},expiresAt:{gt:new Date(now)}} ,orderBy:{activatedAt:"desc"}});

@@ -17,10 +17,10 @@
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "referral:backfill": "tsx scripts/backfill-first-transfer-referral.ts",
     "network:recalculate": "tsx scripts/recalculate-network.ts",
-    "db:studio": "prisma studio"
-    ,"support:production-check": "tsx scripts/support-production-check.ts"
-    ,"support:query-diagnostics": "tsx scripts/support-query-diagnostics.ts"
-    ,"support:seed-rules": "tsx scripts/seed-support-rules.ts"
+    "db:studio": "prisma studio",
+    "support:production-check": "tsx scripts/support-production-check.ts",
+    "support:query-diagnostics": "tsx scripts/support-query-diagnostics.ts",
+    "support:seed-rules": "tsx scripts/seed-support-rules.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -40,6 +40,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.9.2",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
     "zod": "^3.25.76"
