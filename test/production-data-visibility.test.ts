@@ -12,8 +12,8 @@ describe("production data visibility compatibility",()=>{
   it("marks legacy rows read-only compatibility",()=>expect(mergeVisibleTrades([], [trade({source:"LEGACY_COMPATIBILITY"})])[0].source).toBe("LEGACY_COMPATIBILITY"));
   it("does not expose settlement functions from the compatibility module",()=>expect(source("lib/trade-history-compat.server.ts")).not.toMatch(/settleUserTrade|creditAiProfit|returnTradePrincipal/));
   it("loads new trades from AiFinancialTrade",()=>expect(source("lib/trade-history-compat.server.ts")).toContain("aiFinancialTrade.findMany"));
-  it("uses raw sponsor relationships for direct membership",()=>{const route=source("app/api/team/route.ts");expect(route).toContain('u."sponsorId"=${parent.id}');expect(route).toContain('u."sponsorUid"=${parent.uid}')});
-  it("does not filter the direct member list by qualification",()=>expect(source("app/api/team/route.ts")).not.toMatch(/WHERE \(u\."sponsorId"[\s\S]{0,300}retainedPrincipal[^`]*>=50/));
+  it("uses the shared canonical sponsor relationships for direct membership",()=>{const route=source("app/api/team/route.ts"),helper=source("lib/direct-members.ts");expect(route).toContain("canonicalDirectMemberWhere(parent)");expect(helper).toContain('u."sponsorId"=${parent.id}');expect(helper).toContain('u."sponsorUid"=${parent.uid}')});
+  it("does not filter the direct member list by qualification",()=>expect(source("lib/direct-members.ts")).not.toMatch(/retainedPrincipal|financialWallet|>=50/));
   it("falls back when a relational wallet is missing",()=>expect(source("lib/future-wallet.server.ts")).toContain('source:"LEGACY_COMPATIBILITY"'));
   it("keeps compatibility wallet reads non-mutating",()=>{const body=source("lib/future-wallet.server.ts").split("export async function getWalletReadSnapshot")[1].split("type Mutation")[0];expect(body).not.toMatch(/create|update|upsert|ensureFutureWallet|lockFutureWallet/)});
   it("keeps compatibility history reads non-mutating",()=>{const body=source("lib/trade-history-compat.server.ts");expect(body).not.toMatch(/\.create\(|\.update\(|\.upsert\(|\.delete\(/)});

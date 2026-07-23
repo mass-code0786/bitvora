@@ -12,10 +12,11 @@ import { Card, PageHeader, Stat } from "./ui";
 export function ProfileScreen() {
   const user=useCurrentUser();
   const {store}=useWalletStore();
-  const direct=store.rankAccount.directRankCount;
+  const [direct,setDirect]=useState(0);
   const team=store.rankAccount.qualifiedTeamCount;
   const star=store.rankAccount.currentStar;
   const [totalProfit,setTotalProfit]=useState("0.00");
+  useEffect(()=>{const controller=new AbortController(),load=()=>void fetch("/api/account/profile-summary",{cache:"no-store",signal:controller.signal}).then(async response=>response.ok?response.json():null).then(value=>{if(Number.isInteger(value?.directCount)&&value.directCount>=0)setDirect(value.directCount)}).catch(()=>{});load();window.addEventListener("bitvora-wallet-updated",load);return()=>{controller.abort();window.removeEventListener("bitvora-wallet-updated",load)}},[]);
   useEffect(()=>{const controller=new AbortController(),load=()=>void fetch("/api/account/profit",{cache:"no-store",signal:controller.signal}).then(async response=>response.ok?response.json():null).then(value=>{if(typeof value?.totalProfit==="string")setTotalProfit(value.totalProfit)}).catch(()=>{});load();window.addEventListener("bitvora-wallet-updated",load);return()=>{controller.abort();window.removeEventListener("bitvora-wallet-updated",load)}},[]);
   const initials=(user?.name??user?.email??"").split(/\s+|@/).filter(Boolean).slice(0,2).map(value=>value[0]?.toUpperCase()).join("")||"—";
   const rankLabel=star>0?`${star}${star===1?"st":star===2?"nd":star===3?"rd":"th"} Star`:"No rank";
