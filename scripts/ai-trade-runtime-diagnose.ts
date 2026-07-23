@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getWalletReadSnapshot } from "@/lib/future-wallet.server";
 import { formatUserTimestamp,resolveUserTimeZone } from "@/lib/timezone.server";
 import { aiTradeScaleConfig,queues } from "@/lib/ai-trade-scale/config";
-import { creationBullJobId,creationJobKey,scheduleSessionsForUser } from "@/lib/ai-trade-scale/orchestrator";
+import { createBullJobId,creationJobKey,scheduleSessionsForUser } from "@/lib/ai-trade-scale/orchestrator";
 import { closeAiTradeQueues,getRedisConnection,getTradeQueue } from "@/lib/ai-trade-scale/queue";
 
 const argument=process.argv.find(value=>value.startsWith("--user="))?.slice("--user=".length).trim();
@@ -17,7 +17,7 @@ async function main(){
     const sessionKey=`${item.session.id}:${item.session.timeZone}`,run=await prisma.tradeSessionRun.findUnique({where:{localTradingDate_sessionId_tradeType:{localTradingDate:item.session.tradingDate,sessionId:sessionKey,tradeType:"AI_BOT"}},select:{id:true,status:true,localTradingDate:true,localSessionSlot:true,tradeType:true,totalEligible:true,totalQueued:true,totalStarted:true,totalFailed:true}});
     const trade=run?await prisma.aiFinancialTrade.findUnique({where:{userId_sessionRunId_tradeType:{userId:user.id,sessionRunId:run.id,tradeType:"AI_BOT"}},select:{id:true,executionKey:true,status:true,failureCode:true,createdAt:true}}):null,job=run?await prisma.aiTradeJob.findFirst({where:{OR:[{jobKey:creationJobKey(run,user.id)},{sessionRunId:run.id,userId:user.id,kind:"CREATE"}]},select:{id:true,jobKey:true,bullJobId:true,status:true,attempts:true,failureCode:true,failureMessage:true}}):null;
     const skippedReason=trade?"TRADE_EXISTS":job?`JOB_${job.status}`:!item.due?"FUTURE_SESSION":!item.insideCatchUp?"OUTSIDE_CATCH_UP_WINDOW":!item.subscriptionEligible?"SUBSCRIPTION_NOT_ACTIVE_AT_SLOT":!item.additionalEligible?"ADDITIONAL_WINDOW_INELIGIBLE":!wallet.authoritativeReady?wallet.missingWallet?"RELATIONAL_WALLET_MISSING":"OPENING_LEDGER_MISSING":!wallet.availableFuture.isPositive()?"INSUFFICIENT_AUTHORITATIVE_FUTURE":"DUE_NOT_ENQUEUED";
-    return{slot:item.session.sequence,type:item.session.type,expectedLocal:formatUserTimestamp(item.session.liveFrom,timeZone).localDateTime,due:item.due,insideCatchUp:item.insideCatchUp,eligible:item.subscriptionEligible&&item.additionalEligible,sessionId:item.session.id,sessionKey,expectedBullJobId:run?creationBullJobId(run,user.id):null,run,job,trade,skippedReason}
+    return{slot:item.session.sequence,type:item.session.type,expectedLocal:formatUserTimestamp(item.session.liveFrom,timeZone).localDateTime,due:item.due,insideCatchUp:item.insideCatchUp,eligible:item.subscriptionEligible&&item.additionalEligible,sessionId:item.session.id,sessionKey,expectedBullJobId:run?createBullJobId(run,user.id):null,run,job,trade,skippedReason}
   }));
   const latestFailure=await prisma.aiTradeJob.findFirst({where:{userId:user.id,status:{in:["FAILED","DEAD"]}},orderBy:{updatedAt:"desc"},select:{jobKey:true,bullJobId:true,queueName:true,status:true,attempts:true,failureCode:true,failureMessage:true,updatedAt:true}});
   let redis:{healthy:boolean;ping?:string;error?:string}={healthy:false},queueCounts:Record<string,number>|null=null;
