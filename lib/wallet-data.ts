@@ -8,7 +8,7 @@ export type WalletTransactionType=
   |"SPOT_REWARD_INCOME"|"SPOT_FUTURE_TRANSFER_INCOME"|"SPOT_OTHER_INCOME"
   |"SPOT_TO_FUTURE_TRANSFER"|"FUTURE_TO_SPOT_TRANSFER"|"FUTURE_EARLY_TRANSFER_FEE"|"FUTURE_AI_TRADING_PROFIT"|"SPOT_WITHDRAWAL"
   |"AI_BOT_PURCHASE"|"AI_TRADE_CAPITAL_LOCKED"|"AI_TRADE_PRINCIPAL_RETURNED"|"AI_TRADE_PROFIT_CREDITED";
-export type TransactionStatus="COMPLETED"|"PENDING"|"DEMO"|"REJECTED";
+export type TransactionStatus="COMPLETED"|"PENDING"|"DEMO"|"REJECTED"|"Pending Admin Review"|"Processing"|"Broadcasted"|"Confirming"|"Completed"|"Rejected"|"Failed"|"Under Review";
 export type TransferLedgerDetails={grossAmount:number;deductionAmount:number;netAmount:number;progressPercentage:number};
 export type WithdrawalLedgerDetails={requestedAmount:number;fee:number;netAmount:number;network:"BEP20"|"TRC20"|"ERC20";address:string};
 export type AiTradeLedgerDetails={userUid:string;tradeId:string;sessionId:string;pair:string;direction:"CALL"|"PUT";source:"MANUAL"|"AI_BOT"|"UNKNOWN";grossFutureBalance:number;tradeCapital:number;profitPercentage:number;profitAmount:number};

@@ -66,6 +66,39 @@ enum AiOutboxStatus {
   DEAD
 }
 
+enum WithdrawalStatus {
+  PENDING_ADMIN_REVIEW
+  REQUESTED
+  VALIDATING
+  QUEUED
+  PROCESSING
+  BROADCASTED
+  CONFIRMING
+  COMPLETED
+  RETRYABLE_FAILED
+  MANUAL_REVIEW
+  REJECTED
+  CANCELLED
+}
+
+enum WithdrawalJobStatus {
+  PENDING
+  ENQUEUED
+  PROCESSING
+  COMPLETED
+  RETRYABLE_FAILED
+  MANUAL_REVIEW
+}
+
+enum WithdrawalBroadcastStatus {
+  RESERVED
+  SIGNING
+  BROADCASTED
+  CONFIRMED
+  FAILED
+  UNCERTAIN
+}
+
 enum SalaryCycleStatus {
   PENDING
   RUNNING
@@ -103,6 +136,7 @@ model User {
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   timezone                    String                       @default("UTC")
+  withdrawalsSuspended        Boolean                      @default(false)
   country                     String?
   countryName                 String?
   countryCode                 String?                      @db.VarChar(2)
@@ -139,6 +173,9 @@ model User {
   additionalTradeEligibility AiAdditionalTradeEligibility?
   legacyTradeMigrations      AiLegacyTradeMigration[]
   financialWallet            AiFinancialWallet?
+  withdrawals                Withdrawal[]
+  withdrawalLedger           WithdrawalLedger[]
+  withdrawalAdminActions     WithdrawalAdminAudit[]
 
   @@index([sponsorId])
   @@index([sponsorUid])
@@ -865,4 +902,141 @@ model IdempotencyRecord {
   @@unique([key, scope])
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Withdrawal {
+  id                    String             @id @default(cuid())
+  userId                String
+  clientRequestId       String
+  dailyKey              String             @unique
+  userLocalDate         String             @db.VarChar(10)
+  userTimeZone          String
+  processingMode        String
+  requestIdempotencyKey String             @unique
+  debitIdempotencyKey   String             @unique
+  payoutIdempotencyKey  String             @unique
+  refundIdempotencyKey  String             @unique
+  asset                 String             @default("USDT")
+  chain                 String             @default("EVM")
+  network               String
+  chainId               Int
+  tokenContract         String
+  tokenDecimals         Int
+  destinationAddress    String
+  requestedAmount       Decimal            @db.Decimal(24, 8)
+  platformFee           Decimal            @db.Decimal(24, 8)
+  networkFeeBaseUnits   Decimal            @default(0) @db.Decimal(36, 0)
+  networkFeeAsset       String             @default("BNB")
+  recipientAmount       Decimal            @db.Decimal(24, 8)
+  debitedAmount         Decimal            @db.Decimal(24, 8)
+  status                WithdrawalStatus   @default(REQUESTED)
+  txHash                 String?            @unique
+  confirmations          Int                @default(0)
+  requiredConfirmations  Int
+  broadcastedAt          DateTime?
+  confirmedAt            DateTime?
+  completedAt            DateTime?
+  failureCode            String?
+  failureMessage         String?
+  riskReason             String?
+  reviewedByAdminId      String?
+  approvedAt             DateTime?
+  rejectedAt             DateTime?
+  rejectionReason        String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledger                 WithdrawalLedger[]
+  jobs                   WithdrawalJob[]
+  attempts               WithdrawalBroadcastAttempt[]
+  adminActions           WithdrawalAdminAudit[]
+
+  @@unique([userId, clientRequestId])
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model WithdrawalAdminAudit {
+  id            String     @id @default(cuid())
+  withdrawalId  String
+  adminId       String
+  action        String
+  previousStatus WithdrawalStatus
+  nextStatus    WithdrawalStatus
+  txHash        String?
+  reason        String?
+  createdAt     DateTime   @default(now())
+  withdrawal    Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+  admin         User       @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([withdrawalId, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model WithdrawalSystemState {
+  id                    String   @id @default("default")
+  signerAvailable       Boolean  @default(false)
+  signerAddress         String?
+  workerHeartbeatAt     DateTime?
+  updatedAt             DateTime @updatedAt
+}
+
+model WithdrawalLedger {
+  id              String     @id @default(cuid())
+  withdrawalId    String
+  userId          String
+  idempotencyKey  String     @unique
+  operation       String
+  amount          Decimal    @db.Decimal(24, 8)
+  balanceBefore   Decimal    @db.Decimal(24, 8)
+  balanceAfter    Decimal    @db.Decimal(24, 8)
+  createdAt       DateTime   @default(now())
+  withdrawal      Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([withdrawalId, operation])
+  @@index([userId, createdAt])
+}
+
+model WithdrawalJob {
+  id              String              @id @default(cuid())
+  withdrawalId    String
+  kind            String
+  jobKey          String              @unique
+  bullJobId       String              @unique
+  status          WithdrawalJobStatus @default(PENDING)
+  attempts        Int                 @default(0)
+  lastErrorCode   String?
+  nextAttemptAt   DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  withdrawal      Withdrawal          @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+
+  @@unique([withdrawalId, kind])
+  @@index([status, nextAttemptAt])
+}
+
+model WithdrawalBroadcastAttempt {
+  id                    String                    @id @default(cuid())
+  withdrawalId          String
+  chain                 String
+  network               String
+  fromAddress           String
+  toAddress             String
+  requestedAmount       Decimal                   @db.Decimal(24, 8)
+  networkFee            Decimal                   @db.Decimal(36, 0)
+  nonce                  BigInt
+  signedTransactionHash String?
+  txHash                 String?                   @unique
+  successKey            String?                    @unique
+  attemptNumber         Int
+  status                WithdrawalBroadcastStatus @default(RESERVED)
+  errorCode             String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  withdrawal            Withdrawal                @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+
+  @@unique([withdrawalId, attemptNumber])
+  @@unique([chain, network, fromAddress, nonce])
+  @@index([withdrawalId, status])
 }

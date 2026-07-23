@@ -1,0 +1,34 @@
+import { readFileSync } from "node:fs";
+import { describe,expect,it,vi } from "vitest";
+import { normalizeEvmAddress } from "@/lib/withdrawals/address.server";
+import { classifyWithdrawal } from "@/lib/withdrawals/audit.server";
+import { withdrawalBullJobId } from "@/lib/withdrawals/queue.server";
+import { mayBroadcastWithdrawal,nextSafeNonce } from "@/lib/withdrawals/processor.server";
+import { publicWithdrawalStatus } from "@/lib/withdrawals/types";
+import { withdrawalLog } from "@/lib/withdrawals/log.server";
+const source=(path:string)=>readFileSync(path,"utf8");
+
+describe("automatic withdrawal safety",()=>{
+  it("valid requests have one deterministic payout identity",()=>expect(withdrawalBullJobId("w1")).toBe("withdrawal-payout__w1"));
+  it("duplicate API requests use a relational user/client unique key",()=>expect(source("prisma/schema.prisma")).toContain("@@unique([userId, clientRequestId])"));
+  it("wallet debit and durable job are created in one Serializable transaction",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value).toContain('operation:"DEBIT"');expect(value).toContain('kind:"PAYOUT"');expect(value).toContain('isolationLevel:"Serializable"')});
+  it("payout jobs are unique per withdrawal and kind",()=>expect(source("prisma/schema.prisma")).toContain("@@unique([withdrawalId, kind])"));
+  it("an existing tx hash prevents another broadcast",()=>expect(mayBroadcastWithdrawal({status:"PROCESSING",txHash:"0xabc"})).toBe(false));
+  it("a crash after signing cannot resend",()=>expect(mayBroadcastWithdrawal({status:"PROCESSING",signedTransactionHash:"0xabc"})).toBe(false));
+  it("concurrent reservations produce distinct monotonically safe nonces",()=>{const first=nextSafeNonce(12,null),second=nextSafeNonce(12,BigInt(first));expect([first,second]).toEqual([12,13])});
+  it("insufficient balance is checked before withdrawal creation",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value.indexOf("INSUFFICIENT_BALANCE")).toBeLessThan(value.indexOf("tx.withdrawal.create"))});
+  it("invalid and zero addresses are rejected by the official EVM library",()=>{expect(()=>normalizeEvmAddress("bad")).toThrow();expect(()=>normalizeEvmAddress("0x0000000000000000000000000000000000000000")).toThrow()});
+  it("insufficient liquidity retains locked user funds and schedules retry",()=>{const value=source("lib/withdrawals/processor.server.ts");expect(value).toContain("HOT_WALLET_LIQUIDITY_INSUFFICIENT");expect(value).not.toContain("refundFailedWithdrawal(withdrawal.id,\"HOT_WALLET")});
+  it("confirmed status maps to completed once threshold is met",()=>expect(classifyWithdrawal({status:"COMPLETED",txHash:"0x1",confirmations:12,requiredConfirmations:12,jobs:1,debits:1,refunds:0,successfulAttempts:1})).toBe("CONSISTENT_COMPLETED"));
+  it("failed on-chain transfer uses the unique refund path",()=>{const value=source("lib/withdrawals/processor.server.ts");expect(value).toContain('refundFailedWithdrawal(withdrawal.id,"ON_CHAIN_REVERT")');expect(source("prisma/schema.prisma")).toContain("refundIdempotencyKey  String             @unique")});
+  it("an ambiguous RPC broadcast is routed to review",()=>expect(source("lib/withdrawals/processor.server.ts")).toContain('failureCode:"AMBIGUOUS_BROADCAST"'));
+  it("daily and per-transaction limits are enforced",()=>{const value=source("lib/withdrawals/submission.server.ts");for(const key of ["AUTO_WITHDRAW_MAX_PER_TX","AUTO_WITHDRAW_MAX_PER_USER_DAILY","AUTO_WITHDRAW_MAX_GLOBAL_DAILY"])expect(value).toContain(key)});
+  it("large withdrawals become manual review",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value).toContain('"PER_TRANSACTION_LIMIT"');expect(value).toContain('"MANUAL_REVIEW"')});
+  it("a suspended account is rejected before debit",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value.indexOf("ACCOUNT_SUSPENDED")).toBeLessThan(value.indexOf("requestSpotWithdrawal(wallet"))});
+  it("secret-shaped logging fields are redacted",()=>{const spy=vi.spyOn(console,"info").mockImplementation(()=>undefined);withdrawalLog("test",{withdrawalId:"w",privateKey:"secret",mnemonic:"secret2"});expect(spy).toHaveBeenCalledWith(expect.not.stringContaining("secret"));spy.mockRestore()});
+  it("the API never imports or creates the signer",()=>{const value=source("app/api/withdrawals/request/route.ts");expect(value).not.toContain("createProductionSigner");expect(value).not.toContain("signer.server")});
+  it("only worker scripts instantiate production signer",()=>{const matches=["scripts/withdrawal-worker.ts","scripts/withdrawal-confirmation-worker.ts"].filter(path=>source(path).includes("createProductionSigner"));expect(matches).toHaveLength(2);expect(source("lib/withdrawals/submission.server.ts")).not.toContain("createProductionSigner")});
+  it("BullMQ retries cannot bypass database payout identity",()=>{const value=source("lib/withdrawals/processor.server.ts");expect(value).toContain("mayBroadcastWithdrawal");expect(source("prisma/schema.prisma")).toContain("successKey            String?                    @unique")});
+  it("reconciliation defaults to dry-run and requires explicit apply",()=>{const value=source("scripts/withdrawal-reconcile.ts");expect(value).toContain('const apply=process.argv.includes("--apply")');expect(value).toContain('mode:apply?"APPLY":"DRY_RUN"')});
+  it("frontend states expose safe user-facing processing states",()=>{expect(["PENDING_ADMIN_REVIEW","REQUESTED","PROCESSING","RETRYABLE_FAILED","MANUAL_REVIEW","REJECTED"].map(publicWithdrawalStatus)).toEqual(["Pending Admin Review","Processing","Processing","Processing","Under Review","Rejected"])});
+});

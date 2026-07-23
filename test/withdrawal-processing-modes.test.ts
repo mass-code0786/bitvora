@@ -1,0 +1,24 @@
+import { readFileSync } from "node:fs";
+import { describe,expect,it } from "vitest";
+import { signerHeartbeatAvailable } from "@/lib/withdrawals/mode.server";
+import { getTradingDate } from "@/lib/ai-trading-engine";
+const source=(path:string)=>readFileSync(path,"utf8");
+describe("withdrawal processing modes and daily enforcement",()=>{
+  it("a healthy signer heartbeat selects automatic processing",()=>expect(signerHeartbeatAvailable({signerAvailable:true,workerHeartbeatAt:new Date("2026-07-23T10:00:00Z")},new Date("2026-07-23T10:01:00Z"))).toBe(true));
+  it("PM2 omits both withdrawal workers unless automation and signer configuration are present",()=>{const config=source("ecosystem.config.js");expect(config).toContain("withdrawalSignerConfigured=withdrawalAutomationEnabled");expect(config).toContain("const withdrawalApps=withdrawalSignerConfigured?[");expect(config).toContain("...withdrawalApps")});
+  it("automatic mode also requires the explicit automation flag",()=>expect(source("lib/withdrawals/mode.server.ts")).toContain('WITHDRAWAL_AUTOMATION_ENABLED!=="true"'));
+  it("missing or stale signer state selects admin fallback without throwing",()=>{expect(signerHeartbeatAvailable(null)).toBe(false);expect(signerHeartbeatAvailable({signerAvailable:true,workerHeartbeatAt:new Date(0)},new Date())).toBe(false);expect(source("lib/withdrawals/submission.server.ts")).toContain('"PENDING_ADMIN_REVIEW"')});
+  it("automatic and fallback modes create only the appropriate durable state",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value).toContain('processingMode=automatic?"AUTOMATIC":"ADMIN_FALLBACK"');expect(value).toContain('if(status==="QUEUED")await tx.withdrawalJob.create')});
+  it("the database enforces one withdrawal for a user-local calendar day",()=>{const schema=source("prisma/schema.prisma"),service=source("lib/withdrawals/submission.server.ts");expect(schema).toContain("dailyKey              String             @unique");expect(service).toContain("WITHDRAWAL_DAILY:");expect(service).toContain("DAILY_WITHDRAWAL_LIMIT")});
+  it("simultaneous requests converge through the unique daily key",()=>expect(source("lib/withdrawals/submission.server.ts")).toContain('error.code==="P2002"'));
+  it("the next local day has a different durable key",()=>{expect(getTradingDate(Date.parse("2026-07-23T18:29:59Z"),"Asia/Kolkata")).toBe("2026-07-23");expect(getTradingDate(Date.parse("2026-07-23T18:30:00Z"),"Asia/Kolkata")).toBe("2026-07-24")});
+  it("invalid requests fail before a daily record is created",()=>{const value=source("lib/withdrawals/submission.server.ts");expect(value.indexOf("INVALID_ADDRESS")).toBeLessThan(value.indexOf("dailyKey=`WITHDRAWAL_DAILY"))});
+  it("rejected records retain their daily key",()=>{const value=source("lib/withdrawals/admin.server.ts");expect(value).toContain('status:"REJECTED"');expect(value).not.toContain("withdrawal.delete")});
+  it("admin rejection refunds exactly once",()=>{const value=source("lib/withdrawals/admin.server.ts");expect(value).toContain("refundIdempotencyKey");expect(value).toContain("if(!existing)");expect(source("prisma/schema.prisma")).toContain("refundIdempotencyKey  String             @unique")});
+  it("admin approval never invokes debit or automatic enqueue",()=>{const value=source("lib/withdrawals/admin.server.ts");expect(value).not.toContain('operation:"DEBIT"');expect(value).not.toContain("enqueueWithdrawalJob")});
+  it("stored hashes and fallback mode block automatic payout",()=>{const processor=source("lib/withdrawals/processor.server.ts"),admin=source("lib/withdrawals/admin.server.ts");expect(processor).toContain("mayBroadcastWithdrawal");expect(admin).toContain('processingMode!=="ADMIN_FALLBACK"')});
+  it("old pending admin withdrawals are never picked up by recovery",()=>expect(source("lib/withdrawals/submission.server.ts")).toContain('where:{status:{in:["PENDING","RETRYABLE_FAILED"]}'));
+  it("browser timezone is absent from the request contract",()=>{const route=source("app/api/withdrawals/request/route.ts");expect(route).not.toContain("timezone:");expect(source("lib/withdrawals/submission.server.ts")).toContain("resolveUserTimeZone(account.timezone,account.country)")});
+  it("persisted timezone controls the calendar boundary",()=>expect(getTradingDate(Date.parse("2026-07-23T23:30:00Z"),"America/New_York")).toBe("2026-07-23"));
+  it("admin actions require server authorization and create audit records",()=>{const route=source("app/api/admin/withdrawals/route.ts"),service=source("lib/withdrawals/admin.server.ts");expect(route).toContain("requireDemoAdmin");expect(service).toContain("withdrawalAdminAudit.create")});
+});

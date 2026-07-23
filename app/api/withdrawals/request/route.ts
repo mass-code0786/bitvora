@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getKycUser } from "@/lib/kyc/kyc-access.server";
-import { assertWithdrawalKycEligibility, KycError } from "@/lib/kyc/kyc-service.server";
-import { createEmptyTradingStore } from "@/lib/ai-trading-engine";
-import { cloneWalletSeed, migrateWalletStore, MINIMUM_WITHDRAWAL_AMOUNT, money, requestSpotWithdrawal, type WalletStore } from "@/lib/wallet-data";
+import { assertWithdrawalKycEligibility,KycError } from "@/lib/kyc/kyc-service.server";
 import { prisma } from "@/lib/prisma";
-const schema=z.object({amount:z.number().positive(),network:z.literal("BEP20"),address:z.string().trim().min(8),idempotencyKey:z.string().min(8).max(120)});
-export async function POST(request:Request){try{const value=schema.parse(await request.json()),user=await getKycUser();await assertWithdrawalKycEligibility(user.id);const amount=money(value.amount);if(amount<MINIMUM_WITHDRAWAL_AMOUNT)return NextResponse.json({error:"Minimum withdrawal amount is $10.",code:"BELOW_MINIMUM"},{status:400});const result=await prisma.$transaction(async transaction=>{const state=await transaction.userState.findUnique({where:{userId:user.id}}),wallet=migrateWalletStore(state?.wallet??cloneWalletSeed()),next=requestSpotWithdrawal(wallet,{...value,amount,userId:user.id,timestamp:Date.now(),key:value.idempotencyKey}),record=next.transactions.find(item=>item.id===`${value.idempotencyKey}:withdrawal`);if(!record?.withdrawalDetails)throw new Error("Withdrawal record is unavailable.");const stored=await transaction.userState.upsert({where:{userId:user.id},create:{userId:user.id,wallet:next as object,trading:createEmptyTradingStore() as object},update:{wallet:next as object}});return{wallet:stored.wallet as unknown as WalletStore,record}}, {isolationLevel:"Serializable"});return NextResponse.json(result,{headers:{"Cache-Control":"no-store"}})}catch(error){if(error instanceof KycError)return NextResponse.json({error:error.message,code:error.code},{status:error.status});const message=error instanceof z.ZodError?"Invalid withdrawal request.":error instanceof Error?error.message:"Invalid withdrawal request.",status=message.startsWith("Insufficient")?409:400;return NextResponse.json({error:message},{status})}}
+import { migrateWalletStore } from "@/lib/wallet-data";
+import { createWithdrawal,WithdrawalRequestError } from "@/lib/withdrawals/submission.server";
+import { withdrawalResponse } from "@/lib/withdrawals/types";
+
+const schema=z.object({amount:z.number().positive(),network:z.literal("BEP20"),address:z.string().trim().min(1).max(128),clientRequestId:z.string().min(8).max(120).optional(),idempotencyKey:z.string().min(8).max(120).optional()}).refine(value=>Boolean(value.clientRequestId??value.idempotencyKey));
+export async function POST(request:Request){
+  try{
+    const value=schema.parse(await request.json()),user=await getKycUser();await assertWithdrawalKycEligibility(user.id);
+    const withdrawal=await createWithdrawal(user.id,{amount:value.amount,network:value.network,address:value.address,clientRequestId:value.clientRequestId??value.idempotencyKey!}),state=await prisma.userState.findUnique({where:{userId:user.id},select:{wallet:true}});
+    return NextResponse.json({...withdrawalResponse(withdrawal),record:withdrawalResponse(withdrawal),wallet:migrateWalletStore(state?.wallet)},{headers:{"Cache-Control":"no-store"}});
+  }catch(error){
+    if(error instanceof KycError||error instanceof WithdrawalRequestError)return NextResponse.json({error:error.message,code:error.code},{status:error.status});
+    if(error instanceof z.ZodError)return NextResponse.json({error:"Invalid withdrawal request.",code:"INVALID_REQUEST"},{status:400});
+    console.error(JSON.stringify({event:"withdrawal_request_failed",errorCode:error instanceof Error?error.name:"UNKNOWN"}));
+    return NextResponse.json({error:"Withdrawal request could not be processed safely.",code:"WITHDRAWAL_UNAVAILABLE"},{status:503});
+  }
+}
