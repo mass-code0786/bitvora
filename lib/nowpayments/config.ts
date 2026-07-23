@@ -1,4 +1,5 @@
 export const NOWPAYMENTS_NETWORKS={USDT_BEP20:{label:"BEP20 (BNB Smart Chain)",network:"BEP20",payCurrency:"usdtbsc"}} as const;
+export const MINIMUM_DEPOSIT_USDT=1;
 export type NowPaymentsNetwork=keyof typeof NOWPAYMENTS_NETWORKS;
 export const NOWPAYMENTS_PRICE_CURRENCY="usd";
 export const NOWPAYMENTS_PENDING_STATUSES=["WAITING","CONFIRMING","CONFIRMED","SENDING","PARTIALLY_PAID"] as const;
