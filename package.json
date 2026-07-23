@@ -47,7 +47,8 @@
     "salary:reconcile": "tsx scripts/salary-audit.ts --repair",
     "salary:run-current": "tsx scripts/salary-run-current.ts",
     "salary:dry-run": "tsx scripts/salary-dry-run.ts",
-    "diagnose:navigation": "node scripts/diagnose-client-navigation.mjs"
+    "diagnose:navigation": "node scripts/diagnose-client-navigation.mjs",
+    "nowpayments:diagnose": "tsx scripts/nowpayments-diagnose.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
