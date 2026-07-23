@@ -31,6 +31,7 @@
     "ai-trade:outbox-worker": "tsx scripts/ai-outbox-worker.ts",
     "ai-trade:session-audit": "tsx scripts/ai-trade-audit.ts session",
     "ai-trade:runtime-diagnose": "tsx scripts/ai-trade-runtime-diagnose.ts",
+    "ai-trade:catch-up": "tsx scripts/ai-trade-catch-up.ts",
     "ai-trade:reconcile": "tsx scripts/ai-trade-audit.ts reconcile",
     "ai-trade:settlement-audit": "tsx scripts/ai-trade-audit.ts settlement",
     "ai-trade:load-test": "vitest run test/ai-trade-20000-load.test.ts --configLoader runner",

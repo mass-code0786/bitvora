@@ -16,6 +16,13 @@ export async function ensureFutureWallet(tx:FutureWalletTx,userId:string){
 }
 
 export async function lockFutureWallet(tx:FutureWalletTx,userId:string){await ensureFutureWallet(tx,userId);await tx.$queryRaw`SELECT "userId" FROM "AiFinancialWallet" WHERE "userId"=${userId} FOR UPDATE`;return tx.aiFinancialWallet.findUniqueOrThrow({where:{userId}})}
+export async function lockAuthoritativeFutureWallet(tx:FutureWalletTx,userId:string){
+  const opening=await tx.aiWalletLedger.findUnique({where:{idempotencyKey:`FUTURE_OPENING:${userId}`},select:{id:true}});
+  if(!opening)throw new Error("AUTHORITATIVE_OPENING_LEDGER_MISSING");
+  const rows=await tx.$queryRaw<Array<{userId:string}>>`SELECT "userId" FROM "AiFinancialWallet" WHERE "userId"=${userId} FOR UPDATE`;
+  if(!rows.length)throw new Error("AUTHORITATIVE_FUTURE_WALLET_MISSING");
+  return tx.aiFinancialWallet.findUniqueOrThrow({where:{userId}});
+}
 export async function getFutureBalance(userId:string){return prisma.$transaction(async tx=>(await lockFutureWallet(tx,userId)).availableFuture,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
 export async function getWalletSnapshot(userId:string):Promise<FutureWalletSnapshot>{return prisma.$transaction(async tx=>{const value=await lockFutureWallet(tx,userId);return{availableFuture:value.availableFuture,lockedFuture:value.lockedFuture,completedProfit:value.completedProfit,retainedPrincipal:value.retainedPrincipal,version:value.version}},{isolationLevel:Prisma.TransactionIsolationLevel.Serializable})}
 export async function getWalletReadSnapshot(userId:string):Promise<FutureWalletReadSnapshot>{const[financial,opening,state]=await Promise.all([prisma.aiFinancialWallet.findUnique({where:{userId}}),prisma.aiWalletLedger.findUnique({where:{idempotencyKey:`FUTURE_OPENING:${userId}`},select:{id:true}}),prisma.userState.findUnique({where:{userId},select:{wallet:true}})]),legacy=migrateWalletStore(state?.wallet);if(financial&&opening)return{availableFuture:financial.availableFuture,lockedFuture:financial.lockedFuture,completedProfit:financial.completedProfit,retainedPrincipal:financial.retainedPrincipal,version:financial.version,source:"RELATIONAL",authoritativeReady:true,missingWallet:false,missingOpeningLedger:false};return{availableFuture:new Prisma.Decimal(String(legacy.wallets.future.balance)),lockedFuture:new Prisma.Decimal(String(legacy.lockedFutureTradeCapital)),completedProfit:new Prisma.Decimal(String(legacy.totalCompletedTradingProfit)),retainedPrincipal:new Prisma.Decimal(String(legacy.totalFuturePrincipal)),version:financial?.version??0,source:"LEGACY_COMPATIBILITY",authoritativeReady:false,missingWallet:!financial,missingOpeningLedger:!opening}}

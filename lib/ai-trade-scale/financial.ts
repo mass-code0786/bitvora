@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { creditAiProfit,lockFutureWallet,lockTradePrincipal,reconcileLegacyMirror,returnTradePrincipal } from "@/lib/future-wallet.server";
+import { creditAiProfit,lockAuthoritativeFutureWallet,lockFutureWallet,lockTradePrincipal,reconcileLegacyMirror,returnTradePrincipal } from "@/lib/future-wallet.server";
 import { calculatePrincipal,calculateProfit,existingProfitRate,TRADE_PERCENTAGE } from "./amount";
 import { TradeJobError } from "./errors";
+import { tradeExecutionKey } from "./orchestrator";
 
 const lockKey=(id:string)=>`TRADE_LOCK:${id}`;
 const returnKey=(id:string)=>`TRADE_PRINCIPAL_RETURN:${id}`;
@@ -11,7 +12,7 @@ export async function createTradeForUser(sessionRunId:string,userId:string){retu
   const run=await tx.tradeSessionRun.findUniqueOrThrow({where:{id:sessionRunId}});
   const subscription=run.tradeType==="AI_BOT"?await tx.aiBotSubscription.findFirst({where:{userId,status:"ACTIVE",activatedAt:{lte:run.scheduledStartAt},expiresAt:{gt:run.scheduledStartAt}},orderBy:{activatedAt:"desc"},select:{id:true}}):null;
   if(run.tradeType==="AI_BOT"&&!subscription)throw new TradeJobError("SUBSCRIPTION_EXPIRED",false);
-  const user=await tx.user.findUniqueOrThrow({where:{id:userId},select:{uid:true}}),wallet=await lockFutureWallet(tx,userId),executionKey=`${userId}:${run.localTradingDate}:${run.sessionId}:${run.tradeType}`;
+  const user=await tx.user.findUniqueOrThrow({where:{id:userId},select:{uid:true}}),wallet=await lockAuthoritativeFutureWallet(tx,userId),executionKey=tradeExecutionKey(run,userId);
   const duplicate=await tx.aiFinancialTrade.findUnique({where:{executionKey}});if(duplicate)return duplicate;
   const principal=calculatePrincipal(wallet.availableFuture),rate=existingProfitRate(user.uid,run.localTradingDate,run.sessionType==="ADDITIONAL"?"ADDITIONAL":"REGULAR"),profit=calculateProfit(wallet.availableFuture,rate),tradeId=crypto.randomUUID();
   const trade=await tx.aiFinancialTrade.create({data:{id:tradeId,executionKey,sessionRunId,userId,subscriptionId:subscription?.id,tradeType:run.tradeType,placementSource:run.tradeType==="MANUAL"?"MANUAL":"AI_BOT",userTimeZone:run.timeZone,localTradingDate:run.localTradingDate,localSessionSlot:run.localSessionSlot,balanceSnapshot:wallet.availableFuture,tradePercentage:TRADE_PERCENTAGE,principal,profitRate:rate,profit,status:"LOCKED",officialStartedAt:run.scheduledStartAt}});
