@@ -21,7 +21,7 @@ export async function ensureRun(session:TradeSession,tradeType="AI_BOT"){
 
 type EnqueueRun={id:string;localTradingDate:string;localSessionSlot:string;tradeType:string};
 export const creationJobKey=(run:EnqueueRun,userId:string)=>`CREATE:${userId}:${run.localTradingDate}:${run.localSessionSlot}:${run.tradeType}`;
-export const createBullJobId=(run:EnqueueRun,userId:string)=>`ai-trade-create__${userId}__${run.localTradingDate}__${run.localSessionSlot}__${run.tradeType}`;
+export const createBullJobId=(run:EnqueueRun,userId:string)=>`ai-trade-create__${userId}__${run.localTradingDate}__${run.localSessionSlot}__${run.tradeType}`.replaceAll(":","__");
 export const tradeExecutionKey=(run:EnqueueRun,userId:string)=>`AI_TRADE:${userId}:${run.localTradingDate}:${run.localSessionSlot}:${run.tradeType}`;
 export const settlementBullJobId=(tradeId:string)=>`ai-trade-settle__${tradeId}`;
 export function resolveRecoveryBullJobId(job:{kind:string;userId:string|null;bullJobId:string|null;jobKey:string;sessionRunId:string;sessionRun:{localTradingDate:string;localSessionSlot:string;tradeType:string}}){
