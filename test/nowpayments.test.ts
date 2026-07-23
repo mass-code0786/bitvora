@@ -8,14 +8,14 @@ import type { DemoDepositRecord } from "@/lib/nowpayments/deposit-types";
 import { DEPOSIT_STORE_KEY, readDepositRecords, writeDepositRecords } from "@/lib/nowpayments/deposit-types";
 import { cloneWalletSeed, creditNowPaymentsDeposit } from "@/lib/wallet-data";
 
-const original={enabled:process.env.NOWPAYMENTS_DEPOSIT_ENABLED,mock:process.env.NOWPAYMENTS_MOCK_MODE,secret:process.env.NOWPAYMENTS_IPN_SECRET,key:process.env.NOWPAYMENTS_API_KEY,url:process.env.NEXT_PUBLIC_APP_URL};
+const original={enabled:process.env.NOWPAYMENTS_DEPOSIT_ENABLED,mock:process.env.NOWPAYMENTS_MOCK_MODE,secret:process.env.NOWPAYMENTS_IPN_SECRET,key:process.env.NOWPAYMENTS_API_KEY,url:process.env.NEXT_PUBLIC_APP_URL,databaseUrl:process.env.DATABASE_URL};
 const user={id:`test-user-${randomUUID()}`,uid:"BV900001"};
 const baseRecord=():DemoDepositRecord=>({id:`record-${randomUUID()}`,userId:user.id,userUid:user.uid,provider:"NOWPAYMENTS",providerPaymentId:"123456",orderId:"BITVORA_DEPOSIT:BV900001:1:abcd",requestedAmount:10,payAmount:10,payCurrency:"usdtbsc",network:"USDT_BEP20",payAddress:"0xBscAddress",paymentStatus:"WAITING",actuallyPaid:0,amountCredited:0,creditStatus:"NOT_CREDITED",txHash:null,idempotencyKey:randomUUID(),createdAt:1,updatedAt:1,finishedAt:null,expiresAt:null,mock:false});
 const payment=(overrides:Record<string,unknown>={})=>({payment_id:"123456",payment_status:"finished",pay_address:"0xBscAddress",price_amount:10,price_currency:"usd",pay_amount:10,pay_currency:"usdtbsc",order_id:"BITVORA_DEPOSIT:BV900001:1:abcd",actually_paid:10,updated_at:"2026-07-17T10:00:00.000Z",payin_hash:"tx123",...overrides});
 
 describe.sequential("NOWPayments deposits",()=>{
-  beforeAll(()=>{process.env.NOWPAYMENTS_DEPOSIT_ENABLED="true";process.env.NOWPAYMENTS_MOCK_MODE="true";process.env.NOWPAYMENTS_IPN_SECRET="test-ipn-secret";process.env.NEXT_PUBLIC_APP_URL="https://example.test"});
-  afterAll(()=>{for(const[key,value]of Object.entries(original)){const envKey={enabled:"NOWPAYMENTS_DEPOSIT_ENABLED",mock:"NOWPAYMENTS_MOCK_MODE",secret:"NOWPAYMENTS_IPN_SECRET",key:"NOWPAYMENTS_API_KEY",url:"NEXT_PUBLIC_APP_URL"}[key]!;if(value===undefined)delete process.env[envKey];else process.env[envKey]=value}});
+  beforeAll(()=>{process.env.NOWPAYMENTS_DEPOSIT_ENABLED="true";process.env.NOWPAYMENTS_MOCK_MODE="true";process.env.NOWPAYMENTS_IPN_SECRET="test-ipn-secret";process.env.NEXT_PUBLIC_APP_URL="https://example.test";delete process.env.DATABASE_URL});
+  afterAll(()=>{for(const[key,value]of Object.entries(original)){const envKey={enabled:"NOWPAYMENTS_DEPOSIT_ENABLED",mock:"NOWPAYMENTS_MOCK_MODE",secret:"NOWPAYMENTS_IPN_SECRET",key:"NOWPAYMENTS_API_KEY",url:"NEXT_PUBLIC_APP_URL",databaseUrl:"DATABASE_URL"}[key]!;if(value===undefined)delete process.env[envKey];else process.env[envKey]=value}});
   it("1. creates a valid development deposit",async()=>{const record=await createDeposit(user,{amount:25,network:"USDT_BEP20",idempotencyKey:randomUUID()});expect(record.providerPaymentId).toMatch(/^MOCK_NP_/);expect(record.payCurrency).toBe("usdtbsc");expect(record.userId).toBe(user.id)});
   it("2. rejects an invalid amount",()=>{expect(()=>createDepositSchema.parse({amount:0,network:"USDT_BEP20",idempotencyKey:randomUUID()})).toThrow()});
   it("3. rejects an unsupported network",()=>{expect(()=>createDepositSchema.parse({amount:10,network:"USDT_ERC20",idempotencyKey:randomUUID()})).toThrow()});
