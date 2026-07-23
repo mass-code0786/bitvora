@@ -1,4 +1,3 @@
-import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export class NowPaymentsError extends Error{constructor(public code:string,message="NOWPayments request failed",public status=502){super(message)}}

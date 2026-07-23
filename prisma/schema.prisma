@@ -152,6 +152,7 @@ model NowPaymentsDeposit {
   idempotencyKey  String
   usdtAmount      Decimal   @db.Decimal(24, 8)
   requestedAmount Decimal   @db.Decimal(18, 2)
+  providerPayAmount Decimal @db.Decimal(24, 8)
   walletAddress   String
   txHash          String?
   status          String

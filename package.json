@@ -48,7 +48,9 @@
     "salary:run-current": "tsx scripts/salary-run-current.ts",
     "salary:dry-run": "tsx scripts/salary-dry-run.ts",
     "diagnose:navigation": "node scripts/diagnose-client-navigation.mjs",
-    "nowpayments:diagnose": "tsx scripts/nowpayments-diagnose.ts"
+    "nowpayments:diagnose": "tsx scripts/nowpayments-diagnose.ts",
+    "deposit:diagnose": "tsx scripts/deposit-diagnose.ts",
+    "deposit:recover": "tsx scripts/deposit-recover.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
