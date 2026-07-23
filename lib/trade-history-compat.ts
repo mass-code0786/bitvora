@@ -1,5 +1,5 @@
-export type TradeVisibilitySource="RELATIONAL"|"LEGACY_COMPATIBILITY";
-export type VisibleTrade={id:string;source:TradeVisibilitySource;sourceId:string;executionKey:string;sessionId:string;pair:string;direction:"BUY"|"SELL";placementSource:"MANUAL"|"AI_BOT";status:"CAPITAL_LOCKED"|"SETTLED"|"FAILED"|"MISSED";profitReceived:number|null;placedAt:number;settledAt:number|null;principal:number;balanceSnapshot:number;profitRate:number};
+export type TradeVisibilitySource="RELATIONAL"|"RELATIONAL_JOB"|"LEGACY_COMPATIBILITY";
+export type VisibleTrade={id:string;source:TradeVisibilitySource;sourceId:string;executionKey:string;sessionId:string;pair:string;direction:"BUY"|"SELL";placementSource:"MANUAL"|"AI_BOT"|"UNKNOWN";status:"CAPITAL_LOCKED"|"SETTLED"|"FAILED"|"MISSED";profitReceived:number|null;placedAt:number;settledAt:number|null;principal:number;balanceSnapshot:number;profitRate:number};
 
 const identity=(trade:VisibleTrade)=>`${trade.sessionId}|${trade.placedAt}|${trade.principal.toFixed(8)}|${trade.profitReceived??""}`;
 

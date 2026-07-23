@@ -32,6 +32,8 @@
     "ai-trade:session-audit": "tsx scripts/ai-trade-audit.ts session",
     "ai-trade:runtime-diagnose": "tsx scripts/ai-trade-runtime-diagnose.ts",
     "ai-trade:invalid-job-ids": "tsx scripts/ai-trade-invalid-job-ids.ts",
+    "ai-trade:active-audit": "tsx scripts/ai-trade-active-audit.ts",
+    "ai-trade:settlement-recover": "tsx scripts/ai-trade-settlement-recover.ts",
     "ai-trade:catch-up": "tsx scripts/ai-trade-catch-up.ts",
     "ai-trade:reconcile": "tsx scripts/ai-trade-audit.ts reconcile",
     "ai-trade:settlement-audit": "tsx scripts/ai-trade-audit.ts settlement",
