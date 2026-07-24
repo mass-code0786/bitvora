@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyLoginCredentials } from "@/lib/auth/credentials";
+import { authStrategy,sessionCookieName,sessionCookieOptions } from "@/lib/auth/config";
 
 const sessionMaxAge = 30 * 24 * 60 * 60;
 const databaseSessionBridge = {
@@ -18,7 +19,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   trustHost: true,
   secret: process.env.AUTH_SECRET,
-  session: { strategy: "database", maxAge: sessionMaxAge },
+  session: { strategy: authStrategy, maxAge: sessionMaxAge },
+  cookies: { sessionToken: { name:sessionCookieName,options:sessionCookieOptions } },
   pages: { signIn: "/login" },
   providers: [Credentials({
     credentials: { email: { type: "email" }, password: { type: "password" } },

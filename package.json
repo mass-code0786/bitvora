@@ -15,6 +15,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
+    "admin:auth-diagnose": "tsx scripts/admin-auth-diagnose.ts",
     "referral:backfill": "tsx scripts/backfill-first-transfer-referral.ts",
     "network:recalculate": "tsx scripts/recalculate-network.ts",
     "db:studio": "prisma studio",
