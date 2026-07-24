@@ -15,7 +15,13 @@ type ActionProps={
 export function WithdrawalAdminPanel(){
   const[rows,setRows]=useState<AdminWithdrawalResponse[]>([]),[state,setState]=useState<LoadState>("loading"),[hashes,setHashes]=useState<Record<string,string>>({}),[targets,setTargets]=useState<Record<string,"BROADCASTED"|"COMPLETED">>({}),[reasons,setReasons]=useState<Record<string,string>>({}),[message,setMessage]=useState("");
   const load=useCallback(async()=>{setState("loading");try{const response=await fetch("/api/admin/withdrawals",{cache:"no-store"});if(response.status===401||response.status===403){setRows([]);setState("unauthorized");return}const value:unknown=await response.json().catch(()=>null);if(!response.ok||!value||typeof value!=="object"||!Array.isArray((value as {withdrawals?:unknown}).withdrawals)){setRows([]);setState("error");return}setRows((value as {withdrawals:AdminWithdrawalResponse[]}).withdrawals.filter(row=>row&&typeof row.id==="string"));setState("ready")}catch{setRows([]);setState("error")}},[]);
-  useEffect(()=>{void load()},[load]);
+  useEffect(()=>{
+    void load();
+    const refresh=()=>{if(document.visibilityState==="visible")void load()},interval=window.setInterval(refresh,10_000);
+    window.addEventListener("focus",refresh);
+    document.addEventListener("visibilitychange",refresh);
+    return()=>{window.clearInterval(interval);window.removeEventListener("focus",refresh);document.removeEventListener("visibilitychange",refresh)};
+  },[load]);
   const action=async(body:Record<string,string>)=>{try{const response=await fetch("/api/admin/withdrawals",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});if(response.status===401||response.status===403){setState("unauthorized");setMessage("");return}const value:unknown=await response.json().catch(()=>null),error=value&&typeof value==="object"&&"error" in value?String(value.error):"Action failed.";setMessage(response.ok?"Withdrawal updated.":error);if(response.ok)await load()}catch{setMessage("Withdrawal action failed. Please retry.")}};
   return <WithdrawalAdminPanelView rows={rows} state={state} message={message} actions={{hashes,targets,reasons,setHashes,setTargets,setReasons,action}}/>;
 }
